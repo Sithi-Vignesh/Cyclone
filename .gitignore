@@ -1,0 +1,28 @@
+# secrets
+.env
+*.env
+app/backend/config/.env
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# chromadb local data
+*.sqlite3
+chroma_data/
+**/chroma_db/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
