@@ -1,9 +1,10 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from app.backend.core.llm import llm
+from app.backend.prompts.system_prompt import system_prompt
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are Cyclone, my personal AI assistant!"),
+    ("system", system_prompt),
     MessagesPlaceholder(variable_name="history"),
     ("human", "{input}")
 ])
