@@ -25,5 +25,5 @@ def save_summary(summary_text, start_time, end_time, trigger_type):
     store(summary_text, metadata, "semantic_summaries")
     clear_episodes()
 
-def retrieve_summary(query, k=3):
+def retrieve_summary(query, k=5):
     return retrive(query, "semantic_summaries", k)
