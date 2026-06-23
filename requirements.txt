@@ -2,3 +2,5 @@ langchain-groq
 python-dotenv
 langchain
 langchain-community
+chromadb
+sentence-transformers
