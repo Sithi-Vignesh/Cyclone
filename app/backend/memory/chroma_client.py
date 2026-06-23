@@ -14,6 +14,12 @@ collections = {
 def embed(text):
     return embedder.encode(text).tolist()
 
+def clear_episodes():
+    collection = collections["episodic_memory"]
+    all_ids = collection.get()["ids"]
+    if all_ids:
+        collection.delete(ids=all_ids)
+        
 def store(text, metadata, collection_name):
     embedding = embed(text)
     collections[collection_name].add(
