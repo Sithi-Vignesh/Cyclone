@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(consolidate_memories, 'cron', hour=23, minute=3)
+    # scheduler.add_job(consolidate_memories, 'cron', hour=23, minute=3)
+    consolidate_memories()
     scheduler.start()
     events = get_upcoming_events("upcoming")
     for event in events:

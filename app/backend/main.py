@@ -26,13 +26,13 @@ def main():
                 print("Cyclone: Hey Thunder! I'm here 💙")
             continue
 
+        response = chat(query)
+        print("Cyclone: " + response)
+        
         if is_sleep_word(query):
             awake = False
             print("Cyclone: Going to sleep. Call me when you need me 🌙")
             continue
-
-        response = chat(query)
-        print("Cyclone: " + response)
 
 if __name__ == "__main__":
     main()
