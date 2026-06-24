@@ -1,6 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.backend.memory.modifier import consolidate_memories
 from app.backend.memory.sqlite_client import update_event, get_upcoming_events
+from app.backend.core.queue import reminder_queue
 from datetime import datetime, timedelta
 
 def start_scheduler():
@@ -12,7 +13,8 @@ def start_scheduler():
         schedule_event_reminders(scheduler, event)
 
 def remind_user(event):
-    print(f"\n⏰ CYCLONE: Hey THUNDER! Your '{event[1]}' starts in 1 hour!\n")
+    message = f"\n⏰ CYCLONE: Hey THUNDER! Your '{event[1]}' starts in 1 hour!\n"
+    reminder_queue.put(message)
     current = event[7] if event[7] else ""
     updated = current + ("," if current else "") + datetime.now().strftime("%Y-%m-%d %H:%M")
     update_event("reminded_times", updated, event[0])

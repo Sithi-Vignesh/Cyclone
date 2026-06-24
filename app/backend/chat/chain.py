@@ -8,6 +8,8 @@ from app.backend.memory.episodic_memory import retrieve_episodes, store_episode,
 from datetime import datetime
 from app.backend.chat.schemas import CycloneResponse
 from app.backend.scheduler.event_extractor import extract_event
+from app.backend.core.queue import reminder_queue
+import queue
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
@@ -19,15 +21,12 @@ chain = prompt | llm.with_structured_output(CycloneResponse)
 
 history = []
 
-while True:
+def chat(query):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    query = input("ME: ")
-    if query.lower().strip() == "stop": break
-
+    
     core_memory = load_core_memory()
     episodes = retrieve_episodes(query)
     summary = retrieve_summary(query)
-
     personal_facts = retrieve_personal_facts(query)
 
     memory_context = f"""
@@ -47,12 +46,17 @@ while True:
         {summary}
         """
 
+    try:
+        reminder = reminder_queue.get_nowait()
+        memory_context += f"\n\n[REMINDER] {reminder}"
+    except queue.Empty:
+        pass
+
     response = chain.invoke({
         "input": query,
         "history": history,
         "memory_context": memory_context
     })
-    print("CYCLONE:", response.message)
 
     if response.schedule_event: extract_event(response.schedule_event)
 
@@ -61,3 +65,5 @@ while True:
 
     history.append(HumanMessage(content=query))
     history.append(AIMessage(content=response.message))
+
+    return response.message

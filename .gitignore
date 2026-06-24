@@ -26,3 +26,9 @@ Thumbs.db
 
 # logs
 *.log
+
+#sqlite
+events.db
+
+#peronal
+thunder.md
