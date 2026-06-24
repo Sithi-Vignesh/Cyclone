@@ -13,3 +13,6 @@ def store_episode(text, speaker):
 def retrieve_episodes(query, k=5):
     response = retrive(query, "episodic_memory", k)
     return response
+
+def retrieve_personal_facts(query, k=5):
+    return retrive(query, "personal_facts", k=k)

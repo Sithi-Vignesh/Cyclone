@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 from app.backend.core.llm import llm
-from app.backend.memory.chroma_client import store, retrive, clear_episodes
+from app.backend.memory.chroma_client import store, retrive
 
 def generate_summary(episodes):
     prompt = ChatPromptTemplate.from_template("""
@@ -23,7 +23,6 @@ def save_summary(summary_text, start_time, end_time, trigger_type):
         "trigger_type": trigger_type
     }
     store(summary_text, metadata, "semantic_summaries")
-    clear_episodes()
 
 def retrieve_summary(query, k=5):
     return retrive(query, "semantic_summaries", k)

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Literal
 
 class ScheduleEvent(BaseModel):
     title: str
@@ -8,6 +9,11 @@ class MemoryUpdate(BaseModel):
     content: str
     memory_type: str
     importance: float
+
+class PersonalFact(BaseModel):
+    content: str
+    topic : str
+    action_type: Literal["add", "update", "overwrite"]
 
 class ToolCall(BaseModel):
     tool_name: str
