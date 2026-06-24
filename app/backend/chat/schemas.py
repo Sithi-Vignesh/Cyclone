@@ -3,7 +3,10 @@ from typing import Literal
 
 class ScheduleEvent(BaseModel):
     title: str
-    datetime: str
+    type: Literal["college", "projects", "personal", "important"]
+    date: str
+    start_time: str
+    end_time: str
 
 class MemoryUpdate(BaseModel):
     content: str

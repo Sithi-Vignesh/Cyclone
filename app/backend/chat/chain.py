@@ -5,6 +5,9 @@ from app.backend.prompts.system_prompt import system_prompt
 from app.backend.memory.core_memory import load_core_memory
 from app.backend.memory.semantic_summary import retrieve_summary
 from app.backend.memory.episodic_memory import retrieve_episodes, store_episode, retrieve_personal_facts
+from datetime import datetime
+from app.backend.chat.schemas import CycloneResponse
+from app.backend.scheduler.event_extractor import extract_event
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
@@ -12,11 +15,12 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "{input}")
 ])
 
-chain = prompt | llm
+chain = prompt | llm.with_structured_output(CycloneResponse)
 
 history = []
 
 while True:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
     query = input("ME: ")
     if query.lower().strip() == "stop": break
 
@@ -27,6 +31,9 @@ while True:
     personal_facts = retrieve_personal_facts(query)
 
     memory_context = f"""
+        --- CURRENT DATE TIME ---
+        {now}
+
         --- CORE MEMORY ---
         {core_memory}
 
@@ -45,10 +52,12 @@ while True:
         "history": history,
         "memory_context": memory_context
     })
-    print("CYCLONE:", response.content)
+    print("CYCLONE:", response.message)
+
+    if response.schedule_event: extract_event(response.schedule_event)
 
     store_episode(query, "Thunder")
-    store_episode(response.content, "Cyclone")
+    store_episode(response.message, "Cyclone")
 
     history.append(HumanMessage(content=query))
-    history.append(AIMessage(content=response.content))
+    history.append(AIMessage(content=response.message))
