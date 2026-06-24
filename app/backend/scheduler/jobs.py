@@ -1,0 +1,25 @@
+from apscheduler.schedulers.background import BackgroundScheduler
+from app.backend.memory.modifier import consolidate_memories
+from app.backend.memory.sqlite_client import update_event, get_upcoming_events
+from datetime import datetime, timedelta
+
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(consolidate_memories, 'cron', hour=2, minute=0)
+    scheduler.start()
+    events = get_upcoming_events("upcoming")
+    for event in events:
+        schedule_event_reminders(scheduler, event)
+
+def remind_user(event):
+    print(f"\n⏰ CYCLONE: Hey THUNDER! Your '{event[1]}' starts in 1 hour!\n")
+    current = event[7] if event[7] else ""
+    updated = current + ("," if current else "") + datetime.now().strftime("%Y-%m-%d %H:%M")
+    update_event("reminded_times", updated, event[0])
+
+def schedule_event_reminders(scheduler, event):
+    event_dt = datetime.strptime(f"{event[3]} {event[4]}", "%Y-%m-%d %H:%M")
+    reminder_dt = event_dt - timedelta(hours=1)
+    
+    if datetime.now() < reminder_dt and str(reminder_dt) not in (event[7] or ""):
+        scheduler.add_job(remind_user, 'date', run_date=reminder_dt, args=[event])
