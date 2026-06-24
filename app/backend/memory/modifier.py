@@ -1,5 +1,5 @@
 from app.backend.core.llm import llm
-from app.backend.memory.chroma_client import get_all, store, delete_by_topic
+from app.backend.memory.chroma_client import get_all, store, delete_by_topic, clear_episodes
 from app.backend.chat.schemas import PersonalFact
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -39,6 +39,7 @@ def consolidate_memories():
         store(validated.content, {"topic": validated.topic, "action_type": validated.action_type}, "personal_facts")
            
     update_thunder_md(facts)
+    clear_episodes()
 
 def update_thunder_md(facts):
     os.makedirs(os.path.dirname(THUNDER_MD_PATH), exist_ok=True)

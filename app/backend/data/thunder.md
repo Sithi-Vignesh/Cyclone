@@ -1,5 +1,0 @@
-- [volleyball] won the local volleyball tournament in the neighborhood on 19th June
-- [learning_style] learned prompt engineering for fine-tuning Cyclone's response
-- [interests] interested in things inside the deep ocean
-- [interests] not interested in oceans in general, but likes mysterious things like the Bermuda Triangle
-- [learning_style] hands-on learner, making things while studying

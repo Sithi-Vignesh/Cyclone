@@ -31,4 +31,6 @@ Thumbs.db
 events.db
 
 #peronal
-thunder.md
+app/backend/data/thunder.md
+
+app/backend/data/
