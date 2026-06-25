@@ -14,6 +14,7 @@ def init_db():
             date TEXT,
             start_time TEXT,
             end_time TEXT,
+            reminder_time TEXT,
             status TEXT DEFAULT 'upcoming',
             reminded_times TEXT DEFAULT ''
         )
@@ -21,13 +22,13 @@ def init_db():
     conn.commit()
     conn.close()
 
-def create_event(title, type, date, start_time, end_time):
+def create_event(title, type, date, start_time, end_time, reminder_time=None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO events (title, type, date, start_time, end_time)
-        VALUES (?, ?, ?, ?, ?)
-    """,(title, type, date, start_time, end_time))
+        INSERT INTO events (title, type, date, start_time, end_time, reminder_time)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (title, type, date, start_time, end_time, reminder_time))
     conn.commit()
     conn.close()
 
@@ -59,3 +60,11 @@ def delete_event(id):
     """,(id,))
     conn.commit()
     conn.close()
+
+def event_exists(title, date):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM events WHERE title = ? AND date = ?", (title, date))
+    result = cursor.fetchone()
+    conn.close()
+    return result is not None

@@ -48,7 +48,7 @@ def chat(query):
 
     try:
         reminder = reminder_queue.get_nowait()
-        memory_context += f"\n\n[REMINDER] {reminder}"
+        query = f"[REMINDER] {reminder}\n\n{query}"
     except queue.Empty:
         pass
 

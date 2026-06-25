@@ -3,10 +3,11 @@ from typing import Literal
 
 class ScheduleEvent(BaseModel):
     title: str
-    type: Literal["college", "projects", "personal", "important"]
+    type: Literal["college", "projects", "personal", "important"] | None = None
     date: str
-    start_time: str
-    end_time: str
+    start_time: str | None = None
+    end_time: str | None = None
+    reminder_time: str | None = None
 
 class MemoryUpdate(BaseModel):
     content: str
