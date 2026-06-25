@@ -1,8 +1,10 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.backend.memory.modifier import consolidate_memories
 from app.backend.memory.sqlite_client import update_event, get_upcoming_events
+from app.backend.scheduler.checkin import check_in
 from app.backend.core.queue import reminder_queue
 from datetime import datetime, timedelta
+from app.backend.core import state
 
 scheduler = BackgroundScheduler()
 
@@ -12,10 +14,16 @@ def start_scheduler():
     events = get_upcoming_events("upcoming")
     for event in events:
         schedule_event_reminders(event)
+    scheduler.add_job(check_in, 'interval', minutes=1)
 
 def remind_user(event):
     message = f"⏰ Reminder: '{event[1]}' is coming up!"
-    reminder_queue.put(message)
+    if not state.awake:
+        state.awake = True
+        print(f"\nCyclone: Hey Thunder! ⏰ Reminder: '{event[1]}' is coming up!")
+        print("Me: ", end="", flush=True)
+    else:
+        reminder_queue.put(message)
     current = event[8] if event[8] else ""
     updated = current + ("," if current else "") + datetime.now().strftime("%Y-%m-%d %H:%M")
     update_event("reminded_times", updated, event[0])

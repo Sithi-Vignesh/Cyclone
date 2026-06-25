@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+from datetime import datetime
 
 DB_PATH = Path(__file__).parent.parent / "data" / "events.db"
 
@@ -68,3 +69,20 @@ def event_exists(title, date):
     result = cursor.fetchone()
     conn.close()
     return result is not None
+
+def get_ended_events():
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    current_time = now.strftime("%H:%M")
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM events 
+        WHERE status = 'upcoming' 
+        AND date = ? 
+        AND end_time <= ?
+    """, (today, current_time))
+    events = cursor.fetchall()
+    conn.close()
+    return events

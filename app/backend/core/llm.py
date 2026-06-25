@@ -1,4 +1,8 @@
-from langchain_groq import ChatGroq
-from app.backend.config.settings import GROQ_API_KEY
+from langchain_openai import ChatOpenAI
+from app.backend.config.settings import OPENROUTER_API_KEY
 
-llm = ChatGroq(api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
+llm = ChatOpenAI(
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1",
+    model="nvidia/nemotron-3-nano-30b-a3b:free",
+)

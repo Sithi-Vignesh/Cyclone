@@ -43,6 +43,6 @@ def consolidate_memories():
 
 def update_thunder_md(facts):
     os.makedirs(os.path.dirname(THUNDER_MD_PATH), exist_ok=True)
-    with open(THUNDER_MD_PATH, "a") as f:
+    with open(THUNDER_MD_PATH, "a", encoding="utf-8") as f:
         for fact in facts:
             f.write(f"- [{fact['topic']}] {fact['content']}\n")
