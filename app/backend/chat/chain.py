@@ -29,13 +29,21 @@ def chat(query):
     summary = retrieve_summary(query)
     personal_facts = retrieve_personal_facts(query)
 
+    try:
+        reminder = reminder_queue.get_nowait()
+        reminder_context = f"\n--- ACTIVE REMINDER ---\n{reminder}\n"
+    except queue.Empty:
+        reminder_context = ""
+
     memory_context = f"""
         --- CURRENT DATE TIME ---
         {now}
 
         --- CORE MEMORY ---
         {core_memory}
-
+        
+        {reminder_context}
+        
         --- PERSONAL FACTS ---
         {personal_facts}
 
@@ -45,13 +53,6 @@ def chat(query):
         --- SUMMARIES ---
         {summary}
         """
-
-    try:
-        reminder = reminder_queue.get_nowait()
-        query = f"[REMINDER] {reminder}\n\n{query}"
-    except queue.Empty:
-        pass
-
     response = chain.invoke({
         "input": query,
         "history": history,

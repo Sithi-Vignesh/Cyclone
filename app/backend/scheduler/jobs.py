@@ -5,11 +5,14 @@ from app.backend.scheduler.checkin import check_in
 from app.backend.core.queue import reminder_queue
 from datetime import datetime, timedelta
 from app.backend.core import state
+import logging
 
 scheduler = BackgroundScheduler()
 
 def start_scheduler():
     consolidate_memories()
+    logging.basicConfig()
+    logging.getLogger('apscheduler').setLevel(logging.DEBUG)
     scheduler.start()
     events = get_upcoming_events("upcoming")
     for event in events:
