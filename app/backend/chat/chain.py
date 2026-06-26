@@ -10,6 +10,10 @@ from app.backend.chat.schemas import CycloneResponse
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
 import queue
+import re
+
+def clean_message(text):
+    return re.sub(r'\{[\s\S]*\}', '', text).strip()
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
@@ -61,10 +65,12 @@ def chat(query):
 
     if response.schedule_event: extract_event(response.schedule_event)
 
+    cleaned = clean_message(response.message)
+
     store_episode(query, "Thunder")
-    store_episode(response.message, "Cyclone")
+    store_episode(cleaned, "Cyclone")
 
     history.append(HumanMessage(content=query))
-    history.append(AIMessage(content=response.message))
+    history.append(AIMessage(content=cleaned))
 
-    return response.message
+    return cleaned

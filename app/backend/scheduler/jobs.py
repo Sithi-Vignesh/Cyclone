@@ -11,8 +11,6 @@ scheduler = BackgroundScheduler()
 
 def start_scheduler():
     consolidate_memories()
-    logging.basicConfig()
-    logging.getLogger('apscheduler').setLevel(logging.DEBUG)
     scheduler.start()
     events = get_upcoming_events("upcoming")
     for event in events:
@@ -20,7 +18,7 @@ def start_scheduler():
     scheduler.add_job(check_in, 'interval', minutes=1)
 
 def remind_user(event):
-    message = f"⏰ Reminder: '{event[1]}' is coming up!"
+    message = f"Thunder has an upcoming event: '{event[1]}' ({event[2]}) at {event[4]}. Naturally remind them about it in your tone."
     if not state.awake:
         state.awake = True
         print(f"\nCyclone: Hey Thunder! ⏰ Reminder: '{event[1]}' is coming up!")

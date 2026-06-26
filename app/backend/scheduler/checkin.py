@@ -5,6 +5,5 @@ def check_in():
     events = get_ended_events()
     for event in events:
         id = event[0]
-        title = event[1]
-        reminder_queue.put(f"Hey Thunder! Just checking in — how did '{title}' go?")
+        reminder_queue.put(f"Thunder just finished '{event[1]}' ({event[2]}) on {event[3]} from {event[4]} to {event[5]}. Naturally ask how it went in your tone.")
         update_event("status", "completed", id)
