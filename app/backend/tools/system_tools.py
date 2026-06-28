@@ -2,6 +2,7 @@ from langchain.tools import tool
 import os
 import subprocess
 import psutil
+import pyperclip
 
 @tool
 def open_application(app_name: str) -> str:
@@ -29,3 +30,12 @@ def get_battery_status() -> str:
         return "Battery info not available."
     status = "charging" if battery.power_plugged else "not charging"
     return f"Battery is at {battery.percent:.0f}%, {status}."
+
+@tool
+def read_clipboard() -> str:
+    """Reads and returns the current text content from the clipboard."""
+    import pyperclip
+    text = pyperclip.paste()
+    if not text:
+        return "Clipboard is empty."
+    return f"Clipboard contents: {text}"

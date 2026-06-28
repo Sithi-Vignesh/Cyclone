@@ -9,3 +9,4 @@ langchainhub
 pywinauto
 psutil
 ddgs
+pyperclip

@@ -32,6 +32,7 @@ Available tools:
 - get_battery_status: returns current battery percentage and charging status. No parameters needed. Use parameter: {{}}
 - get_weather: returns current weather for a city. Use parameter: {{"city": "<city name>"}}
 - web_search: searches the web using DuckDuckGo and returns top 3 results. Use parameter: {{"query": "<search query>"}}
+- read_clipboard: reads the current text from the clipboard. No parameters needed. Use parameter: {{}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -48,6 +49,7 @@ Rules:
   * A question where the answer to one search determines what to search next
   * Requests with words like "compare", "difference", "vs", "which is better", "contrast"
   * Any research task that needs more than one search to fully answer
+- If the user says "what did I copy", "summarize what I copied", "read my clipboard" → tool_name = "read_clipboard", parameters = {{}}
 </tools>
 
 <reminders>

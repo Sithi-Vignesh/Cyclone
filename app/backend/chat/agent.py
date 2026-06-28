@@ -1,11 +1,11 @@
 from langgraph.prebuilt import create_react_agent
 from app.backend.core.llm import agent_llm
 from datetime import datetime
-from app.backend.tools.system_tools import open_application, open_file, get_battery_status
+from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 
-tools = [open_application, open_file, spotify_play_song, get_weather, get_battery_status, web_search]
+tools = [open_application, open_file, spotify_play_song, get_weather, get_battery_status, web_search, read_clipboard]
 
 agent_executor = create_react_agent(
     agent_llm, 
