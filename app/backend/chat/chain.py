@@ -9,8 +9,9 @@ from datetime import datetime
 from app.backend.chat.schemas import CycloneResponse
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
-from app.backend.tools.system_tools import open_application, open_file
+from app.backend.tools.system_tools import open_application, open_file, get_battery_status
 from app.backend.tools.spotify_tools import spotify_play_song
+from app.backend.tools.web_tools import get_weather
 import queue
 import re
 
@@ -18,6 +19,8 @@ tool_registry = {
     "open_application": open_application,
     "open_file": open_file,
     "spotify_play_song": spotify_play_song,
+    "get_battery_status": get_battery_status,
+    "get_weather" : get_weather,
 }
 
 def clean_message(text):

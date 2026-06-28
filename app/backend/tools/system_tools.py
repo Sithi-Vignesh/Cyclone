@@ -1,6 +1,7 @@
 from langchain.tools import tool
 import os
 import subprocess
+import psutil
 
 @tool
 def open_application(app_name: str) -> str:
@@ -19,3 +20,12 @@ def open_file(file_name: str) -> str:
         return f"Opened {file_name} successfully."
     except Exception as e:
         return f"Failed to open {file_name}: {str(e)}"
+    
+@tool
+def get_battery_status() -> str:
+    """Returns the current battery percentage and charging status."""
+    battery = psutil.sensors_battery()
+    if battery is None:
+        return "Battery info not available."
+    status = "charging" if battery.power_plugged else "not charging"
+    return f"Battery is at {battery.percent:.0f}%, {status}."
