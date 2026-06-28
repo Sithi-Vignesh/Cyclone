@@ -6,12 +6,19 @@ from app.backend.memory.core_memory import load_core_memory
 from app.backend.memory.semantic_summary import retrieve_summary
 from app.backend.memory.episodic_memory import retrieve_episodes, store_episode, retrieve_personal_facts
 from datetime import datetime
-from app.backend.chat.agent import agent_executor
 from app.backend.chat.schemas import CycloneResponse
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
+from app.backend.tools.system_tools import open_application, open_file
+from app.backend.tools.spotify_tools import spotify_play_song
 import queue
 import re
+
+tool_registry = {
+    "open_application": open_application,
+    "open_file": open_file,
+    "spotify_play_song": spotify_play_song,
+}
 
 def clean_message(text):
     return re.sub(r'\{[\s\S]*\}', '', text).strip()
@@ -63,13 +70,14 @@ def chat(query):
         "history": history,
         "memory_context": memory_context
     })
-    print(f"DEBUG tool_call: {response.tool_call}")
+    print(f"DEBUG tool_calls: {response.tool_calls}")
 
     if response.schedule_event: extract_event(response.schedule_event)
     
-    if response.tool_call:
-        tool_result = agent_executor.invoke({"messages": [("user", response.tool_call.tool_name + " " + str(response.tool_call.parameters))]})
-        cleaned = clean_message(tool_result["messages"][-1].content)
+    if response.tool_calls:
+        for tool_call in response.tool_calls:
+            tool_result = tool_registry[tool_call.tool_name].invoke(tool_call.parameters)
+        cleaned = clean_message(str(tool_result))
     else:
         cleaned = clean_message(response.message)
 

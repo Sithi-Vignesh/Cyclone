@@ -27,4 +27,4 @@ class CycloneResponse(BaseModel):
     message: str
     schedule_event: ScheduleEvent | None = None
     memory_update: MemoryUpdate | None = None
-    tool_call: ToolCall | None = None
+    tool_calls: list[ToolCall] | None = None
