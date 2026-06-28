@@ -1,5 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate
-from app.backend.core.llm import llm
+from app.backend.core.llm import summarization_llm
 from app.backend.memory.chroma_client import store, retrive
 
 def generate_summary(episodes):
@@ -12,7 +12,7 @@ def generate_summary(episodes):
     Extract intent, emotion, plans, key facts — discard transactional back-and-forth.
     """)
     
-    chain = prompt | llm
+    chain = prompt | summarization_llm
     response = chain.invoke({"episodes": episodes})
     return response.content
 

@@ -28,3 +28,4 @@ class CycloneResponse(BaseModel):
     schedule_event: ScheduleEvent | None = None
     memory_update: MemoryUpdate | None = None
     tool_calls: list[ToolCall] | None = None
+    use_agent: bool = False

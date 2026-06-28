@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
-from app.backend.core.llm import llm
+from app.backend.core.llm import llm, summarization_llm
 from app.backend.prompts.system_prompt import system_prompt
 from app.backend.memory.core_memory import load_core_memory
 from app.backend.memory.semantic_summary import retrieve_summary
@@ -11,7 +11,8 @@ from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status
 from app.backend.tools.spotify_tools import spotify_play_song
-from app.backend.tools.web_tools import get_weather
+from app.backend.tools.web_tools import get_weather, web_search
+from app.backend.chat.agent import agent_executor
 import queue
 import re
 
@@ -20,7 +21,8 @@ tool_registry = {
     "open_file": open_file,
     "spotify_play_song": spotify_play_song,
     "get_battery_status": get_battery_status,
-    "get_weather" : get_weather,
+    "get_weather": get_weather,
+    "web_search": web_search,
 }
 
 def clean_message(text):
@@ -73,14 +75,23 @@ def chat(query):
         "history": history,
         "memory_context": memory_context
     })
-    print(f"DEBUG tool_calls: {response.tool_calls}")
+    print(f"DEBUG tool_calls: {response.tool_calls}, use_agent: {response.use_agent}")
 
     if response.schedule_event: extract_event(response.schedule_event)
-    
-    if response.tool_calls:
+
+    if response.use_agent:
+        agent_result = agent_executor.invoke({"messages": [HumanMessage(content=query)]})
+        cleaned = clean_message(agent_result["messages"][-1].content)
+    elif response.tool_calls:
+        tool_results = []
         for tool_call in response.tool_calls:
             tool_result = tool_registry[tool_call.tool_name].invoke(tool_call.parameters)
-        cleaned = clean_message(str(tool_result))
+            tool_results.append(f"[{tool_call.tool_name}]: {tool_result}")
+        combined = "\n\n".join(tool_results)
+        summary_response = summarization_llm.invoke(
+            f"The user asked: {query}\n\nTool results:\n{combined}\n\nAnswer the user's question using these results. Be concise and natural."
+        )
+        cleaned = clean_message(summary_response.content)
     else:
         cleaned = clean_message(response.message)
 
