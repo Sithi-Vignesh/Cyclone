@@ -6,6 +6,7 @@ from app.backend.memory.core_memory import load_core_memory
 from app.backend.memory.semantic_summary import retrieve_summary
 from app.backend.memory.episodic_memory import retrieve_episodes, store_episode, retrieve_personal_facts
 from datetime import datetime
+from app.backend.chat.agent import agent_executor
 from app.backend.chat.schemas import CycloneResponse
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
@@ -62,10 +63,15 @@ def chat(query):
         "history": history,
         "memory_context": memory_context
     })
+    print(f"DEBUG tool_call: {response.tool_call}")
 
     if response.schedule_event: extract_event(response.schedule_event)
-
-    cleaned = clean_message(response.message)
+    
+    if response.tool_call:
+        tool_result = agent_executor.invoke({"messages": [("user", response.tool_call.tool_name + " " + str(response.tool_call.parameters))]})
+        cleaned = clean_message(tool_result["messages"][-1].content)
+    else:
+        cleaned = clean_message(response.message)
 
     store_episode(query, "Thunder")
     store_episode(cleaned, "Cyclone")
