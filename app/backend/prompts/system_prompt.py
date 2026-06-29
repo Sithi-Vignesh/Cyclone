@@ -35,6 +35,8 @@ Available tools:
 - read_clipboard: reads the current text from the clipboard. No parameters needed. Use parameter: {{}}
 - get_active_window: returns the title of the currently active window. No parameters needed. Use parameter: {{}}
 - get_all_windows: returns a list of all currently open window titles. No parameters needed. Use parameter: {{}}
+- get_upcoming_events: returns all upcoming events and reminders. No parameters needed. Use parameter: {{}}
+- delete_all_memory: wipes all of Thunder's memory. Requires passcode. Use parameter: {{"passcode": "<passcode>"}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -54,6 +56,8 @@ Rules:
 - If the user says "what did I copy", "summarize what I copied", "read my clipboard" → tool_name = "read_clipboard", parameters = {{}}
 - If the user asks what app they're in, what window is open, or what they're working on → tool_name = "get_active_window", parameters = {{}}
 - If the user asks how many windows are open or what windows are open → tool_name = "get_all_windows", parameters = {{}}
+- If the user asks about upcoming events, reminders, schedule, or what's planned → tool_name = "get_upcoming_events", parameters = {{}}
+- If the user asks to delete or wipe all memory → tool_name = "delete_all_memory", parameters = {{"passcode": "<passcode Thunder provides>"}}
 </tools>
 
 <reminders>
