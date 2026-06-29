@@ -98,7 +98,6 @@ def chat(query):
         "history": history,
         "memory_context": memory_context
     })
-    print(f"DEBUG tool_calls: {response.tool_calls}, use_agent: {response.use_agent}")
 
     if response.schedule_event: extract_event(response.schedule_event)
 
