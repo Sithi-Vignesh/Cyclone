@@ -1,6 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
-from app.backend.core.llm import llm, summarization_llm
+from app.backend.core.llm import invoke_with_rotation, build_llms
+import app.backend.core.llm as llm_module
 from app.backend.prompts.system_prompt import system_prompt
 from app.backend.memory.core_memory import load_core_memory
 from app.backend.memory.semantic_summary import retrieve_summary
@@ -13,6 +14,8 @@ from app.backend.tools.system_tools import open_application, open_file, get_batt
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 from app.backend.chat.agent import agent_executor
+from openai import RateLimitError
+from app.backend.config.settings import OPENROUTER_API_KEYS
 import queue
 import re
 
@@ -25,7 +28,7 @@ tool_registry = {
     "web_search": web_search,
     "read_clipboard": read_clipboard,
     "get_active_window": get_active_window,
-    "get_all_windows" : get_all_windows,
+    "get_all_windows": get_all_windows,
 }
 
 def clean_message(text):
@@ -37,13 +40,26 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "{input}")
 ])
 
-chain = prompt | llm.with_structured_output(CycloneResponse)
+def get_chain():
+    return prompt | llm_module.llm.with_structured_output(CycloneResponse)
 
 history = []
 
+def invoke_chain(payload):
+    total_keys = len(OPENROUTER_API_KEYS)
+    attempts = 0
+    while attempts < total_keys:
+        try:
+            return get_chain().invoke(payload)
+        except RateLimitError:
+            llm_module.current_key_index = (llm_module.current_key_index + 1) % total_keys
+            build_llms(OPENROUTER_API_KEYS[llm_module.current_key_index])
+            attempts += 1
+    raise Exception("All API keys exhausted. Try again tomorrow.")
+
 def chat(query):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    
+
     core_memory = load_core_memory()
     episodes = retrieve_episodes(query)
     summary = retrieve_summary(query)
@@ -61,9 +77,9 @@ def chat(query):
 
         --- CORE MEMORY ---
         {core_memory}
-        
+
         {reminder_context}
-        
+
         --- PERSONAL FACTS ---
         {personal_facts}
 
@@ -73,7 +89,8 @@ def chat(query):
         --- SUMMARIES ---
         {summary}
         """
-    response = chain.invoke({
+
+    response = invoke_chain({
         "input": query,
         "history": history,
         "memory_context": memory_context
@@ -91,7 +108,8 @@ def chat(query):
             tool_result = tool_registry[tool_call.tool_name].invoke(tool_call.parameters)
             tool_results.append(f"[{tool_call.tool_name}]: {tool_result}")
         combined = "\n\n".join(tool_results)
-        summary_response = summarization_llm.invoke(
+        summary_response = invoke_with_rotation(
+            "summarization_llm",
             f"The user asked: {query}\n\nTool results:\n{combined}\n\nAnswer the user's question using these results. Be concise and natural."
         )
         cleaned = clean_message(summary_response.content)

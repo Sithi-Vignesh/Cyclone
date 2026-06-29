@@ -1,8 +1,10 @@
-from app.backend.core.llm import llm
+from app.backend.core.llm import invoke_with_rotation, build_llms
+import app.backend.core.llm as llm_module
 from app.backend.memory.chroma_client import get_all, store, delete_by_topic, clear_episodes
 from app.backend.chat.schemas import PersonalFact
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from openai import RateLimitError
+from app.backend.config.settings import OPENROUTER_API_KEYS
 import json
 import os
 
@@ -27,9 +29,23 @@ def consolidate_memories():
         ("human", "Episodes:\n{episodes}\n\nExisting facts:\n{personal_facts}")
     ])
 
-    chain = prompt | llm
-    response = chain.invoke({"episodes": str(episodes), "personal_facts": str(personal_facts)})
-    
+    total_keys = len(OPENROUTER_API_KEYS)
+    attempts = 0
+    response = None
+    while attempts < total_keys:
+        try:
+            chain = prompt | llm_module.llm
+            response = chain.invoke({"episodes": str(episodes), "personal_facts": str(personal_facts)})
+            break
+        except RateLimitError:
+            llm_module.current_key_index = (llm_module.current_key_index + 1) % total_keys
+            build_llms(OPENROUTER_API_KEYS[llm_module.current_key_index])
+            attempts += 1
+
+    if response is None:
+        print("All API keys exhausted during consolidation. Skipping.")
+        return
+
     facts = json.loads(response.content)
 
     for fact in facts:
@@ -37,7 +53,7 @@ def consolidate_memories():
         if validated.action_type == "overwrite":
             delete_by_topic(validated.topic, "personal_facts")
         store(validated.content, {"topic": validated.topic, "action_type": validated.action_type}, "personal_facts")
-           
+
     update_thunder_md(facts)
     clear_episodes()
 
