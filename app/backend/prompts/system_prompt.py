@@ -33,6 +33,8 @@ Available tools:
 - get_weather: returns current weather for a city. Use parameter: {{"city": "<city name>"}}
 - web_search: searches the web using DuckDuckGo and returns top 3 results. Use parameter: {{"query": "<search query>"}}
 - read_clipboard: reads the current text from the clipboard. No parameters needed. Use parameter: {{}}
+- get_active_window: returns the title of the currently active window. No parameters needed. Use parameter: {{}}
+- get_all_windows: returns a list of all currently open window titles. No parameters needed. Use parameter: {{}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -50,6 +52,8 @@ Rules:
   * Requests with words like "compare", "difference", "vs", "which is better", "contrast"
   * Any research task that needs more than one search to fully answer
 - If the user says "what did I copy", "summarize what I copied", "read my clipboard" → tool_name = "read_clipboard", parameters = {{}}
+- If the user asks what app they're in, what window is open, or what they're working on → tool_name = "get_active_window", parameters = {{}}
+- If the user asks how many windows are open or what windows are open → tool_name = "get_all_windows", parameters = {{}}
 </tools>
 
 <reminders>

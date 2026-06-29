@@ -10,3 +10,5 @@ pywinauto
 psutil
 ddgs
 pyperclip
+pygetwindow
+pyautogui

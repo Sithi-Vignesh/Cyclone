@@ -9,7 +9,7 @@ from datetime import datetime
 from app.backend.chat.schemas import CycloneResponse
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
-from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard
+from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 from app.backend.chat.agent import agent_executor
@@ -23,7 +23,9 @@ tool_registry = {
     "get_battery_status": get_battery_status,
     "get_weather": get_weather,
     "web_search": web_search,
-    "read_clipboard": read_clipboard
+    "read_clipboard": read_clipboard,
+    "get_active_window": get_active_window,
+    "get_all_windows" : get_all_windows,
 }
 
 def clean_message(text):
