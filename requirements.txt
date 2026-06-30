@@ -12,3 +12,4 @@ ddgs
 pyperclip
 pygetwindow
 pyautogui
+vaderSentiment

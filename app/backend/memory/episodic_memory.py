@@ -2,11 +2,11 @@ from app.backend.memory.chroma_client import store, retrive
 from datetime import datetime
 
 
-def store_episode(text, speaker):
+def store_episode(text, speaker, sentiment_score=0.0):
     metadata = {
         "speaker" : speaker,
         "timestamp" : datetime.now().isoformat(),
-        "sentiment_score" : 0.0
+        "sentiment_score" : sentiment_score
     }
     store(text, metadata, "episodic_memory")
 

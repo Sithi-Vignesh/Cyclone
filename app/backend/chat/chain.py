@@ -8,6 +8,7 @@ from app.backend.memory.semantic_summary import retrieve_summary
 from app.backend.memory.episodic_memory import retrieve_episodes, store_episode, retrieve_personal_facts
 from datetime import datetime
 from app.backend.chat.schemas import CycloneResponse
+from app.backend.mood.vader_sentiment import get_sentiment
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows
@@ -118,7 +119,7 @@ def chat(query):
     else:
         cleaned = clean_message(response.message)
 
-    store_episode(query, "Thunder")
+    store_episode(query, "Thunder", sentiment_score=get_sentiment(query))
     store_episode(cleaned, "Cyclone")
 
     history.append(HumanMessage(content=query))
