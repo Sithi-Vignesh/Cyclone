@@ -37,6 +37,7 @@ Available tools:
 - get_all_windows: returns a list of all currently open window titles. No parameters needed. Use parameter: {{}}
 - get_upcoming_events: returns all upcoming events and reminders. No parameters needed. Use parameter: {{}}
 - delete_all_memory: wipes all of Thunder's memory. Requires passcode. Use parameter: {{"passcode": "<passcode>"}}
+- get_mood_summary: returns Thunder's average sentiment and mood entries over the last 7 days. No parameters needed. Use parameter: {{}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -58,6 +59,7 @@ Rules:
 - If the user asks how many windows are open or what windows are open → tool_name = "get_all_windows", parameters = {{}}
 - If the user asks about upcoming events, reminders, schedule, or what's planned → tool_name = "get_upcoming_events", parameters = {{}}
 - If the user asks to delete or wipe all memory → tool_name = "delete_all_memory", parameters = {{"passcode": "<passcode Thunder provides>"}}
+- If the user asks how they've been feeling, their mood lately, whether they've been stressed, or wants a mood/emotional check-in → tool_name = "get_mood_summary", parameters = {{}}
 </tools>
 
 <reminders>

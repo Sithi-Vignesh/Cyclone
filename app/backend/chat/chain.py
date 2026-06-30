@@ -11,8 +11,9 @@ from app.backend.chat.schemas import CycloneResponse
 from app.backend.mood.vader_sentiment import get_sentiment
 from app.backend.scheduler.event_extractor import extract_event
 from app.backend.core.queue import reminder_queue
+from app.backend.mood.mood_log import log_mood
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows
-from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events
+from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 from app.backend.chat.agent import agent_executor
@@ -33,6 +34,7 @@ tool_registry = {
     "get_all_windows": get_all_windows,
     "get_upcoming_events":get_upcoming_events,
     "delete_all_memory": delete_all_memory,
+    "get_mood_summary": get_mood_summary,
 }
 
 def clean_message(text):
@@ -119,7 +121,9 @@ def chat(query):
     else:
         cleaned = clean_message(response.message)
 
-    store_episode(query, "Thunder", sentiment_score=get_sentiment(query))
+    sentiment = get_sentiment(query)
+    log_mood(query, sentiment)
+    store_episode(query, "Thunder", sentiment_score=sentiment)
     store_episode(cleaned, "Cyclone")
 
     history.append(HumanMessage(content=query))

@@ -1,4 +1,5 @@
 from app.backend.memory.sqlite_client import get_upcoming_events as fetch_events
+from app.backend.mood.mood_log import get_mood_trend
 from langchain.tools import tool
 import shutil
 import os
@@ -46,3 +47,13 @@ def delete_all_memory(passcode: str) -> str:
         os.remove(md_path)
 
     return "All memory wiped. I've forgotten everything, THUNDER. Fresh start."
+
+@tool
+def get_mood_summary() -> str:
+    """Returns Thunder's average mood/sentiment over the last 7 days, with recent mood entries."""
+    average, rows = get_mood_trend(days=7)
+    if average is None:
+        return "No mood data available yet."
+    return f"Average sentiment over last 7 days: {average:.2f}\nEntries:\n" + "\n".join(
+        f"- {r[0]} {r[1]}: \"{r[2]}\" (score: {r[3]:.2f})" for r in rows
+    )

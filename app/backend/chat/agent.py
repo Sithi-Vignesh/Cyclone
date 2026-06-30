@@ -2,7 +2,7 @@ from langgraph.prebuilt import create_react_agent
 from app.backend.core.llm import agent_llm
 from datetime import datetime
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows
-from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events
+from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 
@@ -18,6 +18,7 @@ tools = [
     get_all_windows, 
     delete_all_memory, 
     get_upcoming_events,
+    get_mood_summary,
     ]
 
 agent_executor = create_react_agent(
