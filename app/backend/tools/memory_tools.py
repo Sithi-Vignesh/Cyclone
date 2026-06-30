@@ -49,11 +49,11 @@ def delete_all_memory(passcode: str) -> str:
     return "All memory wiped. I've forgotten everything, THUNDER. Fresh start."
 
 @tool
-def get_mood_summary() -> str:
-    """Returns Thunder's average mood/sentiment over the last 7 days, with recent mood entries."""
-    average, rows = get_mood_trend(days=7)
+def get_mood_summary(days: int = 7) -> str:
+    """Returns Thunder's average sentiment and mood entries over the given number of past days. Defaults to 7 if not specified."""
+    average, rows = get_mood_trend(days=days)
     if average is None:
-        return "No mood data available yet."
-    return f"Average sentiment over last 7 days: {average:.2f}\nEntries:\n" + "\n".join(
+        return f"No mood data available for the last {days} days."
+    return f"Average sentiment over last {days} days: {average:.2f}\nEntries:\n" + "\n".join(
         f"- {r[0]} {r[1]}: \"{r[2]}\" (score: {r[3]:.2f})" for r in rows
     )
