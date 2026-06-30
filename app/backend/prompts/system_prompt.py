@@ -38,6 +38,8 @@ Available tools:
 - get_upcoming_events: returns all upcoming events and reminders. No parameters needed. Use parameter: {{}}
 - delete_all_memory: wipes all of Thunder's memory. Requires passcode. Use parameter: {{"passcode": "<passcode>"}}
 - get_mood_summary: returns Thunder's average sentiment and mood entries over the past N days. Use parameter: {{"days": <number>}}. If no specific timeframe is mentioned, default to {{"days": 7}}.
+- get_behavior_summary: returns Thunder's most active hours based on interaction timestamps. No parameters needed. Use parameter: {{}}
+- get_exam_stress_summary: returns Thunder's average mood in the days before each college event. No parameters needed. Use parameter: {{}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -60,6 +62,8 @@ Rules:
 - If the user asks about upcoming events, reminders, schedule, or what's planned → tool_name = "get_upcoming_events", parameters = {{}}
 - If the user asks to delete or wipe all memory → tool_name = "delete_all_memory", parameters = {{"passcode": "<passcode Thunder provides>"}}
 - If the user asks how they've been feeling, their mood lately, whether they've been stressed, or wants a mood/emotional check-in → tool_name = "get_mood_summary". Infer days from context: "today" = 1, "this week" / "past few days" = 7, "this month" = 30, "lately" with no clear range = 7 (default). Parameters = {{"days": <inferred number>}}.
+- If the user asks when they're most active, their daily rhythm, or usage patterns → tool_name = "get_behavior_summary", parameters = {{}}
+- If the user asks if they've been stressed before exams, or wants mood checked against upcoming/past college events → tool_name = "get_exam_stress_summary", parameters = {{}}
 </tools>
 
 <reminders>

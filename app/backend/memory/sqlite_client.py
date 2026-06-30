@@ -86,3 +86,11 @@ def get_ended_events():
     events = cursor.fetchall()
     conn.close()
     return events
+
+def get_events_by_type(type):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM events WHERE type = ?", (type,))
+    events = cursor.fetchall()
+    conn.close()
+    return events
