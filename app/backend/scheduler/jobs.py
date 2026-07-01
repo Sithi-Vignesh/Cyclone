@@ -9,6 +9,14 @@ import logging
 
 scheduler = BackgroundScheduler()
 
+def parse_reminder_dt(date_str, time_str):
+    if 'T' in time_str:
+        time_str = time_str.split('T')[1]
+    elif len(time_str) > 5 and ' ' in time_str:
+        time_str = time_str.split(' ')[1]
+    time_str = time_str[:5]
+    return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+
 def start_scheduler():
     consolidate_memories()
     scheduler.start()
@@ -32,10 +40,18 @@ def remind_user(event):
 
 def schedule_event_reminders(event):
     if event[6]:
-        reminder_dt = datetime.strptime(f"{event[3]} {event[6]}", "%Y-%m-%d %H:%M")
+        try:
+            reminder_dt = parse_reminder_dt(event[3], event[6])
+        except (ValueError, IndexError) as e:
+            logging.warning(f"Skipping reminder for '{event[1]}' — malformed reminder_time '{event[6]}': {e}")
+            return
     elif event[4]:
-        event_dt = datetime.strptime(f"{event[3]} {event[4]}", "%Y-%m-%d %H:%M")
-        reminder_dt = event_dt - timedelta(hours=1)
+        try:
+            event_dt = datetime.strptime(f"{event[3]} {event[4]}", "%Y-%m-%d %H:%M")
+            reminder_dt = event_dt - timedelta(hours=1)
+        except ValueError as e:
+            logging.warning(f"Skipping reminder for '{event[1]}' — malformed start_time '{event[4]}': {e}")
+            return
     else:
         return
 
@@ -57,7 +73,11 @@ def mark_completed_events():
     for event in upcoming:
         id, title, type, date, start_time, end_time, reminder_time, status, reminded_times = event
         if not start_time and not end_time and reminder_time:
-            reminder_dt = datetime.strptime(f"{date} {reminder_time}", "%Y-%m-%d %H:%M")
+            try:
+                reminder_dt = parse_reminder_dt(date, reminder_time)
+            except (ValueError, IndexError) as e:
+                logging.warning(f"Skipping completion check for event {id} — bad reminder_time '{reminder_time}': {e}")
+                continue
             if now > reminder_dt:
                 update_event("status", "completed", id)
 

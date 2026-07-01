@@ -30,8 +30,16 @@ def main():
             print("Cyclone: Going to sleep. Call me when you need me 🌙")
             continue
 
-        response = chat(query)
-        print("Cyclone: " + response)
+        while True:
+            try:
+                response = chat(query)
+                print("Cyclone: " + response)
+                break
+            except ValueError:
+                print("Cyclone: Timed out. Type 'retry' to try again or anything else to skip.")
+                user_input = input("Me: ").lower().strip()
+                if user_input != "retry":
+                    break
 
 if __name__ == "__main__":
     main()

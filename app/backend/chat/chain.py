@@ -113,6 +113,8 @@ def chat(query):
     elif response.tool_calls:
         tool_results = []
         for tool_call in response.tool_calls:
+            if tool_call.tool_name not in tool_registry:
+                continue
             tool_result = tool_registry[tool_call.tool_name].invoke(tool_call.parameters)
             tool_results.append(f"[{tool_call.tool_name}]: {tool_result}")
         combined = "\n\n".join(tool_results)
