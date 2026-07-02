@@ -6,6 +6,7 @@ import pyperclip
 import pygetwindow as gw
 import pyautogui
 import time
+from app.backend.core.error_logger import log_error
 
 @tool
 def open_application(app_name: str) -> str:
@@ -40,11 +41,15 @@ def open_file(file_name: str) -> str:
 @tool
 def get_battery_status() -> str:
     """Returns the current battery percentage and charging status."""
-    battery = psutil.sensors_battery()
-    if battery is None:
-        return "Battery info not available."
-    status = "charging" if battery.power_plugged else "not charging"
-    return f"Battery is at {battery.percent:.0f}%, {status}."
+    try:
+        battery = psutil.sensors_battery()
+        if battery is None:
+            return "Battery info not available."
+        status = "charging" if battery.power_plugged else "not charging"
+        return f"Battery is at {battery.percent:.0f}%, {status}."
+    except Exception as e:
+        log_error("get_battery_status", e)
+        return "Battery status unavailable right now."
 
 @tool
 def read_clipboard() -> str:

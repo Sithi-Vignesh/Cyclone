@@ -2,6 +2,7 @@ from pywinauto import Application
 from pywinauto.findwindows import ElementNotFoundError
 import time
 from langchain.tools import tool
+from app.backend.core.error_logger import log_error
 
 @tool
 def spotify_play_song(song_name: str) -> str:
@@ -17,22 +18,26 @@ def spotify_play_song(song_name: str) -> str:
     else:
         return "Spotify didn't open in time. Try again."
 
-    window = app.top_window()
-    window.set_focus()
-    time.sleep(0.5)
+    try:
+        window = app.top_window()
+        window.set_focus()
+        time.sleep(0.5)
 
-    window.type_keys("^l", pause=0.3)
-    time.sleep(0.5)
+        window.type_keys("^l", pause=0.3)
+        time.sleep(0.5)
 
-    window.type_keys(song_name, with_spaces=True, pause=0.05)
-    time.sleep(0.5)
+        window.type_keys(song_name, with_spaces=True, pause=0.05)
+        time.sleep(0.5)
 
-    window.type_keys("{ENTER}")
-    time.sleep(3)
+        window.type_keys("{ENTER}")
+        time.sleep(3)
 
-    window.type_keys("{TAB}", pause=0.5)
-    window.type_keys("{TAB}", pause=0.5)
-    window.type_keys("{DOWN}", pause=0.5)
-    window.type_keys("{ENTER}")
+        window.type_keys("{TAB}", pause=0.5)
+        window.type_keys("{TAB}", pause=0.5)
+        window.type_keys("{DOWN}", pause=0.5)
+        window.type_keys("{ENTER}")
+    except Exception as e:
+        log_error("spotify_play_song", e)
+        return "Connected to Spotify but ran into an issue playing that — try again?"
 
     return f"Playing {song_name} on Spotify."

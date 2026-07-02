@@ -28,7 +28,7 @@ def get_upcoming_events() -> str:
 def delete_all_memory(passcode: str) -> str:
     """Deletes all of Thunder's memory including ChromaDB, events.db, and thunder.md. Requires a passcode."""
 
-    if passcode.lower() != "thunder3328d":
+    if passcode != "THUNDER3328D":
         return "Incorrect passcode. Memory deletion cancelled."
 
     base = Path(__file__).parent.parent
