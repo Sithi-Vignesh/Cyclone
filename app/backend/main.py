@@ -2,6 +2,7 @@ from app.backend.chat.chain import chat
 from app.backend.scheduler.jobs import start_scheduler
 from app.backend.memory.sqlite_client import init_db
 from app.backend.core import state
+from app.backend.core.error_logger import log_error
 
 def is_wake_word(query):
     q = query.lower().strip()
@@ -40,6 +41,10 @@ def main():
                 user_input = input("Me: ").lower().strip()
                 if user_input != "retry":
                     break
+            except Exception as e:
+                log_error("main.chat_loop", e)
+                print("Cyclone: Something went wrong on my end — I've logged it. What else can I do for you?")
+                break
 
 if __name__ == "__main__":
     main()

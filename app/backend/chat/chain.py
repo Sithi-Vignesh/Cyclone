@@ -22,6 +22,7 @@ from openai import RateLimitError
 from app.backend.config.settings import OPENROUTER_API_KEYS
 import queue
 import re
+from app.backend.core.error_logger import log_error
 
 tool_registry = {
     "open_application": open_application,
@@ -105,32 +106,51 @@ def chat(query):
         "memory_context": memory_context
     })
 
-    if response.schedule_event: extract_event(response.schedule_event)
+    if response.schedule_event:
+        try:
+            extract_event(response.schedule_event)
+        except Exception as e:
+            log_error("extract_event", e)
 
     if response.use_agent:
-        agent_result = agent_executor.invoke({"messages": [HumanMessage(content=query)]})
-        cleaned = clean_message(agent_result["messages"][-1].content)
+        try:
+            agent_result = agent_executor.invoke({"messages": [HumanMessage(content=query)]})
+            cleaned = clean_message(agent_result["messages"][-1].content)
+        except Exception as e:
+            log_error("agent_executor.invoke", e)
+            cleaned = "I ran into an issue looking into that — try asking again?"
     elif response.tool_calls:
         tool_results = []
         for tool_call in response.tool_calls:
             if tool_call.tool_name not in tool_registry:
                 continue
-            tool_result = tool_registry[tool_call.tool_name].invoke(tool_call.parameters)
-            tool_results.append(f"[{tool_call.tool_name}]: {tool_result}")
+            try:
+                tool_result = tool_registry[tool_call.tool_name].invoke(tool_call.parameters)
+                tool_results.append(f"[{tool_call.tool_name}]: {tool_result}")
+            except Exception as e:
+                log_error(f"tool:{tool_call.tool_name}", e)
+                tool_results.append(f"[{tool_call.tool_name}]: failed - {e}")
         combined = "\n\n".join(tool_results)
-        summary_response = invoke_with_rotation(
-            "summarization_llm",
-            f"The user asked: {query}\n\nTool results:\n{combined}\n\nAnswer the user's question using these results. Be concise and natural."
-        )
-        cleaned = clean_message(summary_response.content)
+        try:
+            summary_response = invoke_with_rotation(
+                "summarization_llm",
+                f"The user asked: {query}\n\nTool results:\n{combined}\n\nAnswer the user's question using these results. Be concise and natural."
+            )
+            cleaned = clean_message(summary_response.content)
+        except Exception as e:
+            log_error("summarization_llm", e)
+            cleaned = combined if combined else "I gathered some info but had trouble summarising it — try again?"
     else:
         cleaned = clean_message(response.message)
 
-    sentiment = get_sentiment(query)
-    log_mood(query, sentiment)
-    log_interaction()
-    store_episode(query, "Thunder", sentiment_score=sentiment)
-    store_episode(cleaned, "Cyclone")
+    try:
+        sentiment = get_sentiment(query)
+        log_mood(query, sentiment)
+        log_interaction()
+        store_episode(query, "Thunder", sentiment_score=sentiment)
+        store_episode(cleaned, "Cyclone")
+    except Exception as e:
+        log_error("memory_logging_block", e)
 
     history.append(HumanMessage(content=query))
     history.append(AIMessage(content=cleaned))
