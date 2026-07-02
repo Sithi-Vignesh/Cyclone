@@ -8,7 +8,17 @@ def normalize_time(time_str):
         time_str = time_str.split('T')[1]
     elif len(time_str) > 5 and ' ' in time_str:
         time_str = time_str.split(' ')[1]
-    return time_str[:5]
+
+    parts = time_str.split(':')
+    if len(parts) < 2:
+        return time_str[:5]
+
+    hour_part = parts[0]
+    minute_part = parts[1]
+    if not hour_part.isdigit() or not minute_part.isdigit():
+        return time_str[:5]
+
+    return f"{int(hour_part):02d}:{int(minute_part):02d}"
 
 def extract_event(schedule_event):
     if event_exists(schedule_event.title, schedule_event.date):
