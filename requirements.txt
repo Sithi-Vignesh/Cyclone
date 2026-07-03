@@ -16,3 +16,6 @@ vaderSentiment
 faster-whisper
 sounddevice
 numpy
+# torch/torchaudio: install with --index-url https://download.pytorch.org/whl/cpu to avoid pulling CUDA build
+torch==2.12.1
+torchaudio==2.11.0

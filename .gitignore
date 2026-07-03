@@ -34,3 +34,5 @@ events.db
 app/backend/data/thunder.md
 
 app/backend/data/
+
+test_mic.py
