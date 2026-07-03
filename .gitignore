@@ -32,7 +32,13 @@ events.db
 
 #peronal
 app/backend/data/thunder.md
-
 app/backend/data/
 
+#testing
 test_mic.py
+
+#voice models
+app/backend/voice/models/
+
+#cyclone's first words
+*.wav
