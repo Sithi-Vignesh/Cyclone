@@ -13,3 +13,6 @@ pyperclip
 pygetwindow
 pyautogui
 vaderSentiment
+faster-whisper
+sounddevice
+numpy
