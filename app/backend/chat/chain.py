@@ -120,8 +120,10 @@ def chat(query):
             log_error("agent_executor.invoke", e)
             cleaned = "I ran into an issue looking into that — try asking again?"
     elif response.tool_calls:
+        print(f"DEBUG: tool_calls = {response.tool_calls}")
         tool_results = []
         for tool_call in response.tool_calls:
+            print(f"DEBUG: calling tool {tool_call.tool_name} with {tool_call.parameters}")
             if tool_call.tool_name not in tool_registry:
                 continue
             try:

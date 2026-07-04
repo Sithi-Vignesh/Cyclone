@@ -12,6 +12,11 @@ SAMPLE_RATE = 16000
 CHUNK_SIZE = 512  # samples per chunk, required by Silero VAD at 16kHz
 
 
+def reset_vad() -> None:
+    """Reset Silero VAD internal state (call after TTS to prevent carryover)."""
+    _model.reset_states()
+
+
 def is_speech(audio_chunk: np.ndarray, threshold: float = 0.5) -> bool:
     """
     Takes a single chunk of float32 audio (length == CHUNK_SIZE) and

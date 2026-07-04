@@ -40,5 +40,8 @@ test_mic.py
 #voice models
 app/backend/voice/models/
 
+# voice diagnostic audio dumps (written by stt.py DEBUG_AUDIO mode)
+voice_debug/
+
 #cyclone's first words
 *.wav
