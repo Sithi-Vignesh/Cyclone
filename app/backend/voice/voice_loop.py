@@ -1,5 +1,8 @@
+import queue
+import threading
 import time
 
+import numpy as np
 import sounddevice as sd
 
 from app.backend.voice.wake_word import listen_for_wake_word as _listen_for_wake_word
@@ -7,23 +10,149 @@ from app.backend.voice.vad import is_speech, reset_vad, CHUNK_SIZE, SAMPLE_RATE
 from app.backend.voice.stt import transcribe
 from app.backend.voice.tts import synthesize
 
+# Sentinel object placed on the audio queue by the producer thread to signal
+# that synthesis is complete and no more audio pieces will be enqueued.
+_SENTINEL = object()
+
 POST_TTS_COOLDOWN_SECONDS = 0.3  # let mic AGC settle after TTS playback
 
-SILENCE_TIMEOUT_SECONDS = 10
+SILENCE_TIMEOUT_SECONDS = 6
 RESUME_TIMER_AFTER_PAUSE_SECONDS = 4
 MAX_UTTERANCE_SECONDS = 15  # safety cap on a single recording, prevents runaway listening
 
 
-def speak(text: str) -> None:
-    """Synthesize and immediately (blocking) play a line of text.
+# Fixed callback block size (frames per callback invocation).
+# At 22 050 Hz this is ~46 ms — large enough to give PortAudio a stable
+# budget without accumulating perceptible latency.
+_BLOCKSIZE = 2048
 
-    After playback finishes, pauses briefly and resets the VAD model's
-    internal state so that mic bleed / ambient noise right after TTS
-    doesn't trigger a false speech detection.
+
+def speak(text: str) -> None:
+    """Synthesize and stream-play text via a producer/consumer queue.
+
+    Architecture
+    ------------
+    Producer thread  — iterates synthesize(text), puts (piece, sample_rate)
+                       tuples onto audio_queue, then puts _SENTINEL.
+    Callback thread  — called by PortAudio every _BLOCKSIZE frames; drains
+                       _pending first, then pulls from audio_queue, outputs
+                       silence on underrun (no blocking), raises CallbackStop
+                       when _SENTINEL has been received and _pending is empty.
+    Main thread      — blocks on done_event.wait() until the callback signals
+                       completion, then runs the post-TTS cooldown.
+
+    This decouples synthesis latency from PortAudio's fixed-size block
+    schedule, eliminating both the crackle (irregular write sizes) and the
+    dead-air gaps (slow inter-sentence chunk production).
     """
-    audio, sample_rate = synthesize(text)
-    sd.play(audio, sample_rate)
-    sd.wait()
+    audio_queue: queue.Queue = queue.Queue()
+    done_event = threading.Event()
+
+    # ------------------------------------------------------------------ #
+    # Producer: run synthesize() in a background thread so PortAudio's    #
+    # callback thread is never stalled waiting for Piper to finish a chunk #
+    # ------------------------------------------------------------------ #
+    def _producer() -> None:
+        try:
+            for piece, sr in synthesize(text):
+                audio_queue.put((piece, sr))
+        finally:
+            audio_queue.put(_SENTINEL)
+
+    producer_thread = threading.Thread(target=_producer, daemon=True)
+
+    # Block until the FIRST item is available so we know sample_rate before
+    # constructing the stream.  The producer thread handles the rest.
+    producer_thread.start()
+    first_item = audio_queue.get()  # blocks until producer emits something
+
+    if first_item is _SENTINEL:
+        # synthesize() yielded nothing (empty text) — skip playback entirely.
+        time.sleep(POST_TTS_COOLDOWN_SECONDS)
+        reset_vad()
+        return
+
+    first_piece, sample_rate = first_item
+
+    # ------------------------------------------------------------------ #
+    # _pending: leftover audio not yet consumed by the callback.           #
+    # Shape is always (N, 1) — matches outdata's expected layout.          #
+    # Only touched inside the callback; the producer only touches the queue #
+    # ------------------------------------------------------------------ #
+    _pending: list[np.ndarray] = [first_piece.reshape(-1, 1)]
+    _sentinel_received: list[bool] = [False]  # mutable flag visible to callback
+
+    # ------------------------------------------------------------------ #
+    # Callback: called by PortAudio's internal thread every _BLOCKSIZE     #
+    # frames.  Must never block.                                           #
+    # ------------------------------------------------------------------ #
+    def _callback(
+        outdata: np.ndarray,
+        frames: int,
+        time_info: object,
+        status: sd.CallbackFlags,
+    ) -> None:
+        needed = frames  # samples still to fill in this callback
+        write_pos = 0    # cursor into outdata
+
+        while needed > 0:
+            # --- drain _pending first -----------------------------------
+            if _pending:
+                chunk = _pending[0]
+                if len(chunk) <= needed:
+                    # Consume whole chunk
+                    outdata[write_pos : write_pos + len(chunk)] = chunk
+                    write_pos += len(chunk)
+                    needed -= len(chunk)
+                    _pending.pop(0)
+                else:
+                    # Consume partial chunk, leave remainder
+                    outdata[write_pos : write_pos + needed] = chunk[:needed]
+                    _pending[0] = chunk[needed:]
+                    needed = 0
+                continue
+
+            # --- _pending is empty: try the queue (non-blocking) --------
+            if _sentinel_received[0]:
+                # No more audio coming and nothing left to play.
+                outdata[write_pos:] = 0  # fill remainder with silence
+                done_event.set()
+                raise sd.CallbackStop
+
+            try:
+                item = audio_queue.get_nowait()
+            except queue.Empty:
+                # Queue temporarily empty (producer still working):
+                # output silence for the missing samples to avoid underrun
+                # distortion; a brief clean gap is far less jarring.
+                outdata[write_pos:] = 0
+                return
+
+            if item is _SENTINEL:
+                _sentinel_received[0] = True
+                # Loop back: will hit the sentinel branch above on next iter
+                continue
+
+            piece, _ = item
+            _pending.append(piece.reshape(-1, 1))
+
+        # outdata fully filled
+        if needed == 0 and write_pos == frames:
+            pass  # normal exit
+
+    # ------------------------------------------------------------------ #
+    # Open callback-based stream and wait for completion                   #
+    # ------------------------------------------------------------------ #
+    with sd.OutputStream(
+        samplerate=sample_rate,
+        channels=1,
+        dtype="float32",
+        blocksize=_BLOCKSIZE,
+        callback=_callback,
+    ):
+        done_event.wait()  # blocks until callback raises CallbackStop
+
+    producer_thread.join()  # ensure producer has fully exited
     time.sleep(POST_TTS_COOLDOWN_SECONDS)
     reset_vad()
 
@@ -114,7 +243,6 @@ def listen_and_transcribe() -> str | None:
     if chunks is None:
         return None  # genuine silence timeout
 
-    import numpy as np
     audio = np.concatenate(chunks)
     query = transcribe(audio)
     return query.strip()  # "" if noise-rejected, else real text

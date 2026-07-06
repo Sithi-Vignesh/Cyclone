@@ -52,7 +52,7 @@ NORMALIZE_TARGET = 0.95
 NO_SPEECH_PROB_THRESHOLD = 0.28
 RMS_SILENCE_THRESHOLD = 0.02  # skip Whisper if utterance is likely silence
 
-_model = WhisperModel("base", device="cpu", compute_type="int8")
+_model = WhisperModel("small", device="cpu", compute_type="int8")
 
 
 def _save_debug_wav(audio: np.ndarray) -> str:
