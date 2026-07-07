@@ -1,11 +1,161 @@
+import re
+
+import numpy as np
+from num2words import num2words
 from piper import PiperVoice
 from piper.config import SynthesisConfig
-import numpy as np
 
 _voice = PiperVoice.load("app/backend/voice/models/en_US-libritts-high.onnx")
 
 _syn_config = SynthesisConfig(speaker_id=0)
 
+
+# ---------------------------------------------------------------------------
+# Text normalisation helpers
+# ---------------------------------------------------------------------------
+
+# Regex: full URLs (http/https/ftp/www variants)
+_URL_RE = re.compile(
+    r"https?://\S+|ftp://\S+|www\.\S+",
+    re.IGNORECASE,
+)
+
+# Regex: math operators between two digit characters.
+# Must run BEFORE the markdown-strip step so that "15 * 2" is spoken as
+# "fifteen times two" rather than having the "*" silently removed.
+# The [^\w\n]{0,3} gap allows up to 3 non-word chars (spaces, %, etc.)
+# between the digit and the operator, catching cases like "15% * 2".
+_MATH_MUL_RE = re.compile(r"(\d)[^\w\n]{0,3}\*[^\w\n]{0,3}(\d)")
+_MATH_DIV_RE = re.compile(r"(\d)[^\w\n]{0,3}/[^\w\n]{0,3}(\d)")
+
+# Regex: markdown structural characters
+#   • Leading list markers at line start: "- " or "* "
+#   • Inline bold/italic/code markers: **, *, __, _, `, #
+_MD_LIST_RE = re.compile(r"^[\-\*]\s+", re.MULTILINE)
+_MD_INLINE_RE = re.compile(r"[*_`#]+")
+
+# Regex: HH:MM time patterns (24-hour, optional leading zero on single-digit hours)
+#   Matches: "6:00", "06:00", "18:30", "00:00", "9:05"
+#   Negative look-ahead/look-behind prevents matching e.g. version strings like "1.2:3"
+_TIME_RE = re.compile(
+    r"(?<!\d)"           # not preceded by a digit
+    r"([01]?\d|2[0-3])"  # hours: 0-23, with optional leading zero
+    r":"
+    r"([0-5]\d)"         # minutes: 00-59
+    r"(?!\d)",           # not followed by a digit
+)
+
+# Regex: standalone numbers (integers with optional comma-thousands, or decimals).
+# Runs AFTER the time step so "18" in "18:00" is already consumed.
+_NUMBER_RE = re.compile(
+    r"(?<!\d)"                    # not preceded by digit (avoids mid-word matches)
+    r"(\d{1,3}(?:,\d{3})*"       # integer, optionally with comma-thousands
+    r"(?:\.\d+)?)"                # optional decimal part
+    r"(?!\d)",                    # not followed by digit
+)
+
+
+def _time_to_speech(match: re.Match) -> str:
+    """Convert a HH:MM regex match to a natural spoken-English string."""
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+
+    # Special cases first
+    if hour == 0 and minute == 0:
+        return "midnight"
+    if hour == 12 and minute == 0:
+        return "noon"
+
+    # Determine AM / PM and convert to 12-hour
+    period = "AM" if hour < 12 else "PM"
+    hour_12 = hour % 12
+    if hour_12 == 0:
+        hour_12 = 12  # 00:xx -> 12:xx AM, 12:xx already handled above
+
+    hour_word = num2words(hour_12)  # e.g. "six", "nine"
+
+    if minute == 0:
+        return f"{hour_word} {period}"
+
+    # Minutes: treat single-digit minutes as "oh N" (e.g. "oh five")
+    if minute < 10:
+        minute_word = f"oh {num2words(minute)}"
+    else:
+        minute_word = num2words(minute)  # e.g. "thirty", "forty-five"
+
+    return f"{hour_word} {minute_word} {period}"
+
+
+def _number_to_speech(match: re.Match) -> str:
+    """Convert a number regex match to spoken English via num2words."""
+    raw = match.group(1).replace(",", "")  # strip thousand-separators
+
+    if "." in raw:
+        # Split on decimal point and speak each part separately
+        int_part, dec_part = raw.split(".", 1)
+        int_words = num2words(int(int_part)) if int_part else "zero"
+        # Speak decimal digits individually: "3.14" -> "three point one four"
+        dec_words = " ".join(num2words(int(d)) for d in dec_part)
+        return f"{int_words} point {dec_words}"
+    else:
+        return num2words(int(raw))
+
+
+def normalize_for_speech(text: str) -> str:
+    """
+    Pre-process LLM-generated text before sending it to Piper TTS so that
+    numbers, times, symbols, and links are rendered as natural spoken English.
+
+    Transformations are applied in this order (order matters):
+      a0. Convert math operators between digits to spoken words
+      a. Strip URLs and markdown formatting characters
+      b. Convert HH:MM time patterns to spoken form
+      c. Convert remaining standalone numbers to words via num2words
+      d. Replace stray symbols (%, &, /) with spoken equivalents
+    """
+    # ------------------------------------------------------------------
+    # (a0) Speak math operators BEFORE markdown stripping removes them.
+    #      Only matches when the operator sits between two digit chars,
+    #      so bare markdown "*bold*" is unaffected and still stripped below.
+    # ------------------------------------------------------------------
+    text = _MATH_MUL_RE.sub(r"\1 times \2", text)
+    text = _MATH_DIV_RE.sub(r"\1 divided by \2", text)
+
+    # ------------------------------------------------------------------
+    # (a) Strip URLs and markdown formatting characters
+    # ------------------------------------------------------------------
+    text = _URL_RE.sub("", text)          # remove URLs entirely
+    text = _MD_LIST_RE.sub("", text)      # remove leading list markers
+    text = _MD_INLINE_RE.sub("", text)    # remove *, _, `, # inline
+
+    # ------------------------------------------------------------------
+    # (b) Convert time patterns (HH:MM) BEFORE general number conversion
+    #     so that "18:00" is consumed here and the "18" / "00" are never
+    #     seen by the number regex.
+    # ------------------------------------------------------------------
+    text = _TIME_RE.sub(_time_to_speech, text)
+
+    # ------------------------------------------------------------------
+    # (c) Convert remaining standalone numbers to words
+    # ------------------------------------------------------------------
+    text = _NUMBER_RE.sub(_number_to_speech, text)
+
+    # ------------------------------------------------------------------
+    # (d) Replace remaining stray symbols
+    # ------------------------------------------------------------------
+    text = text.replace("%", " percent")
+    text = text.replace("&", " and ")
+    text = text.replace("/", " or ")
+
+    # Tidy up runs of whitespace that may have been introduced
+    text = re.sub(r" {2,}", " ", text).strip()
+
+    return text
+
+
+# ---------------------------------------------------------------------------
+# TTS synthesis
+# ---------------------------------------------------------------------------
 
 def _crossfade(a: np.ndarray, b: np.ndarray, overlap_samples: int) -> np.ndarray:
     """
@@ -88,6 +238,8 @@ def synthesize(text: str):
     Yields nothing if the underlying synthesizer produces no chunks (empty
     text or silence-only input).
     """
+    text = normalize_for_speech(text)
+
     held_chunk: np.ndarray | None = None
     sample_rate: int | None = None
 
@@ -115,3 +267,21 @@ def synthesize(text: str):
         silence = np.zeros(int(0.15 * sample_rate), dtype=np.float32)
         final_piece = np.ascontiguousarray(np.concatenate([held_chunk, silence]))
         yield final_piece, sample_rate
+
+
+# ---------------------------------------------------------------------------
+# Quick smoke-test (matches the project pattern in wake_word.py)
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    test_cases = [
+        "The meeting is at 18:00",
+        "I have 123 apples",
+        "Revenue grew by 15% * 2",
+        "Check http://example.com/page for details",
+        "The temperature is 3.14 degrees",
+    ]
+    for tc in test_cases:
+        print(f"IN : {tc!r}")
+        print(f"OUT: {normalize_for_speech(tc)!r}")
+        print()

@@ -22,3 +22,4 @@ torchaudio==2.11.0
 
 piper-tts
 openwakeword
+num2words
