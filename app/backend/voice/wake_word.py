@@ -24,7 +24,7 @@ _model = Model(
 )
 
 
-def listen_for_wake_word(threshold: float = 0.025) -> None:
+def listen_for_wake_word(threshold: float = 0.015) -> None:
     """
     Blocks forever, streaming mic audio in small frames, until the
     wake word is detected. Returns control once detected.

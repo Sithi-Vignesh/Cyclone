@@ -20,6 +20,21 @@ _URL_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Regex: emoji Unicode blocks — strip before any TTS processing.
+# Covers emoticons, pictographs, transport, flags, dingbats, supplemental
+# symbols, misc symbols, and variation selectors (which modify emoji appearance).
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F300-\U0001FAFF"  # symbols & pictographs, extended pictographs
+    "\U0001F1E0-\U0001F1FF"  # regional indicator letters (flags)
+    "\U00002700-\U000027BF"  # dingbats
+    "\U0001F900-\U0001F9FF"  # supplemental symbols & pictographs
+    "\U00002600-\U000026FF"  # miscellaneous symbols
+    "\U0000FE00-\U0000FE0F"  # variation selectors (emoji presentation modifiers)
+    "]+",
+    flags=re.UNICODE,
+)
+
 # Regex: math operators between two digit characters.
 # Must run BEFORE the markdown-strip step so that "15 * 2" is spoken as
 # "fifteen times two" rather than having the "*" silently removed.
@@ -108,7 +123,7 @@ def normalize_for_speech(text: str) -> str:
 
     Transformations are applied in this order (order matters):
       a0. Convert math operators between digits to spoken words
-      a. Strip URLs and markdown formatting characters
+      a. Strip URLs, emojis, and markdown formatting characters
       b. Convert HH:MM time patterns to spoken form
       c. Convert remaining standalone numbers to words via num2words
       d. Replace stray symbols (%, &, /) with spoken equivalents
@@ -122,9 +137,14 @@ def normalize_for_speech(text: str) -> str:
     text = _MATH_DIV_RE.sub(r"\1 divided by \2", text)
 
     # ------------------------------------------------------------------
-    # (a) Strip URLs and markdown formatting characters
+    # (a) Strip URLs, emojis, and markdown formatting characters.
+    #     Emojis are treated as pure visual noise — remove before any
+    #     number/time conversion so they can't interfere with patterns.
+    #     The final whitespace-collapse pass at the end of this function
+    #     cleans up any spaces left behind (e.g. trailing emoji on a line).
     # ------------------------------------------------------------------
     text = _URL_RE.sub("", text)          # remove URLs entirely
+    text = _EMOJI_RE.sub("", text)        # remove all emoji codepoints
     text = _MD_LIST_RE.sub("", text)      # remove leading list markers
     text = _MD_INLINE_RE.sub("", text)    # remove *, _, `, # inline
 

@@ -1,4 +1,7 @@
+import threading
+
 from app.backend.chat.chain import chat
+from app.backend.voice.filler import get_filler
 from app.backend.scheduler.jobs import start_scheduler
 from app.backend.memory.sqlite_client import init_db
 from app.backend.core import state
@@ -88,11 +91,38 @@ def main():
             continue
 
         while True:
+            # ----------------------------------------------------------------
+            # Run chat() in a background thread so the filler can be spoken
+            # on the main thread concurrently, masking LLM latency.
+            # ----------------------------------------------------------------
+            chat_result = {"response": None, "error": None}
+
+            def run_chat():
+                try:
+                    chat_result["response"] = chat(query)
+                except Exception as exc:
+                    chat_result["error"] = exc
+
+            chat_thread = threading.Thread(target=run_chat, daemon=True)
+            chat_thread.start()
+
+            # Speak filler while chat() works in the background.
             try:
-                response = chat(query)
-                send_output(mode, response)
+                filler_text = get_filler(query)
+                send_output(mode, filler_text)
+            except Exception as filler_exc:
+                # get_filler() has its own never-raise guarantee, but be safe.
+                log_error("main.filler", filler_exc)
+
+            # Block until chat() is done — no-op if it already finished.
+            # Filler is always fully played/printed before this returns.
+            chat_thread.join()
+
+            # Now inspect the result and mirror the original error handling.
+            if chat_result["error"] is None:
+                send_output(mode, chat_result["response"])
                 break
-            except ValueError:
+            elif isinstance(chat_result["error"], ValueError):
                 send_output(mode, "Timed out.")
                 if mode == "voice":
                     retry_query = listen_and_transcribe()
@@ -100,8 +130,9 @@ def main():
                     retry_query = input("Type 'retry' to try again or anything else to skip.\nMe: ")
                 if not retry_query or retry_query.lower().strip() not in ("retry", "yes", "yeah", "try again"):
                     break
-            except Exception as e:
-                log_error("main.chat_loop", e)
+                # Loop back — next iteration will also use the threaded pattern.
+            else:
+                log_error("main.chat_loop", chat_result["error"])
                 send_output(mode, "Something went wrong on my end — I've logged it. What else can I do for you?")
                 break
 
