@@ -45,3 +45,4 @@ voice_debug/
 
 #cyclone's first words
 *.wav
+tts_tuning_output/

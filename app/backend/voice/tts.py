@@ -7,7 +7,12 @@ from piper.config import SynthesisConfig
 
 _voice = PiperVoice.load("app/backend/voice/models/en_US-libritts-high.onnx")
 
-_syn_config = SynthesisConfig(speaker_id=0)
+_syn_config = SynthesisConfig(
+    speaker_id=0,
+    length_scale=1.1,
+    noise_scale=0.667,
+    noise_w_scale=0.8,
+)
 
 
 # ---------------------------------------------------------------------------

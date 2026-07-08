@@ -49,7 +49,7 @@ NORMALIZE_TARGET = 0.95
 # relying on Whisper's own scores, which vary with audio content.
 # Real speech observed at RMS ~0.10; silence noise expected ~0.001–0.01.
 # ---------------------------------------------------------------------------
-NO_SPEECH_PROB_THRESHOLD = 0.28
+NO_SPEECH_PROB_THRESHOLD = 0.5
 RMS_SILENCE_THRESHOLD = 0.02  # skip Whisper if utterance is likely silence
 
 _model = WhisperModel("small", device="cpu", compute_type="int8")
