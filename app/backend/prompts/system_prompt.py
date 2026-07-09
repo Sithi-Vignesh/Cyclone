@@ -58,6 +58,10 @@ Available tools:
 - mute_unmute_mic: toggles the default microphone mute state. No parameters needed. Use parameter: {{}}
 - set_brightness: sets screen brightness to an exact percentage. Use parameter: {{"level": <0-100>}}
 - adjust_brightness: increases or decreases screen brightness by a fixed step. Use parameter: {{"direction": "up" or "down"}}
+- minimize_window: minimizes a named window, or minimizes all windows (show desktop) if no name given. Use parameter: {{"app_name": "<name>"}} or {{"app_name": ""}}
+- maximize_window: maximizes a named window, or the currently active window if no name given. Use parameter: {{"app_name": "<name>"}} or {{"app_name": ""}}
+- close_window: closes a named window, or the currently active window if no name given. Use parameter: {{"app_name": "<name>"}} or {{"app_name": ""}}
+- focus_window: switches focus to a named window. app_name is required — do not call with an empty name. Use parameter: {{"app_name": "<name>"}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -88,6 +92,13 @@ Rules:
 - If the user asks to mute or unmute the mic or microphone → tool_name = "mute_unmute_mic", parameters = {{}}
 - If the user asks to set brightness to a specific number → tool_name = "set_brightness", parameters = {{"level": <number>}}
 - If the user says "brighten the screen", "dim the screen", or similar without a specific number → tool_name = "adjust_brightness", parameters = {{"direction": "up" or "down"}}
+- If the user asks to minimize a specific app/window → tool_name = "minimize_window", parameters = {{"app_name": "<name>"}}
+- If the user says "minimize everything" / "show desktop" / "minimize all" with no specific app named → tool_name = "minimize_window", parameters = {{"app_name": ""}}
+- If the user asks to maximize a specific app/window → tool_name = "maximize_window", parameters = {{"app_name": "<name>"}}
+- If the user says "maximize this" / "maximize the window" with no specific app named → tool_name = "maximize_window", parameters = {{"app_name": ""}}
+- If the user asks to close a specific app/window → tool_name = "close_window", parameters = {{"app_name": "<name>"}}
+- If the user says "close this" / "close the window" with no specific app named → tool_name = "close_window", parameters = {{"app_name": ""}}
+- If the user asks to switch to / focus / bring up a specific app/window → tool_name = "focus_window", parameters = {{"app_name": "<name>"}}
 </tools>
 
 <reminders>
