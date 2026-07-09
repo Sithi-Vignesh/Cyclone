@@ -13,7 +13,7 @@ from app.backend.scheduler.event_extractor import extract_event
 from app.backend.mood.interaction_log import log_interaction
 from app.backend.core.queue import reminder_queue
 from app.backend.mood.mood_log import log_mood
-from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows
+from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows, set_volume, adjust_volume, mute_unmute_mic, set_brightness, adjust_brightness
 from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary, get_behavior_summary, get_exam_stress_summary
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
@@ -34,11 +34,16 @@ tool_registry = {
     "read_clipboard": read_clipboard,
     "get_active_window": get_active_window,
     "get_all_windows": get_all_windows,
-    "get_upcoming_events":get_upcoming_events,
+    "get_upcoming_events": get_upcoming_events,
     "delete_all_memory": delete_all_memory,
     "get_mood_summary": get_mood_summary,
     "get_behavior_summary": get_behavior_summary,
     "get_exam_stress_summary": get_exam_stress_summary,
+    "set_volume": set_volume,
+    "adjust_volume": adjust_volume,
+    "mute_unmute_mic": mute_unmute_mic,
+    "set_brightness": set_brightness,
+    "adjust_brightness": adjust_brightness,
 }
 
 def clean_message(text):

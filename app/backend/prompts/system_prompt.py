@@ -53,6 +53,11 @@ Available tools:
 - get_mood_summary: returns Thunder's average sentiment and mood entries over the past N days. Use parameter: {{"days": <number>}}. If no specific timeframe is mentioned, default to {{"days": 7}}.
 - get_behavior_summary: returns Thunder's most active hours based on interaction timestamps. No parameters needed. Use parameter: {{}}
 - get_exam_stress_summary: returns Thunder's average mood in the days before each college event. No parameters needed. Use parameter: {{}}
+- set_volume: sets system master volume to an exact percentage. Use parameter: {{"level": <0-100>}}
+- adjust_volume: increases or decreases volume by a fixed step. Use parameter: {{"direction": "up" or "down"}}
+- mute_unmute_mic: toggles the default microphone mute state. No parameters needed. Use parameter: {{}}
+- set_brightness: sets screen brightness to an exact percentage. Use parameter: {{"level": <0-100>}}
+- adjust_brightness: increases or decreases screen brightness by a fixed step. Use parameter: {{"direction": "up" or "down"}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -78,6 +83,11 @@ Rules:
 - If the user asks how they've been feeling, their mood lately, whether they've been stressed, or wants a mood/emotional check-in → tool_name = "get_mood_summary". Infer days from context: "today" = 1, "this week" / "past few days" = 7, "this month" = 30, "lately" with no clear range = 7 (default). Parameters = {{"days": <inferred number>}}.
 - If the user asks when they're most active, their daily rhythm, or usage patterns → tool_name = "get_behavior_summary", parameters = {{}}
 - If the user asks if they've been stressed before exams, or wants mood checked against upcoming/past college events → tool_name = "get_exam_stress_summary", parameters = {{}}
+- If the user asks to set volume to a specific number → tool_name = "set_volume", parameters = {{"level": <number>}}
+- If the user says "turn up the volume", "lower the volume", or similar without a specific number → tool_name = "adjust_volume", parameters = {{"direction": "up" or "down"}}
+- If the user asks to mute or unmute the mic or microphone → tool_name = "mute_unmute_mic", parameters = {{}}
+- If the user asks to set brightness to a specific number → tool_name = "set_brightness", parameters = {{"level": <number>}}
+- If the user says "brighten the screen", "dim the screen", or similar without a specific number → tool_name = "adjust_brightness", parameters = {{"direction": "up" or "down"}}
 </tools>
 
 <reminders>

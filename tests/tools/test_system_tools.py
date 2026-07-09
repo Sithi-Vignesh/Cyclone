@@ -18,7 +18,13 @@ from app.backend.tools.system_tools import (
     read_clipboard,
     get_active_window,
     get_all_windows,
+    set_volume,
+    adjust_volume,
+    mute_unmute_mic,
+    set_brightness,
+    adjust_brightness,
 )
+
 
 
 # ---------------------------------------------------------------------------
@@ -225,3 +231,268 @@ class TestGetAllWindows:
         with patch("app.backend.tools.system_tools.gw.getAllWindows", return_value=[]):
             result = get_all_windows()
         assert "No open windows" in result
+
+
+# ---------------------------------------------------------------------------
+# set_volume
+# ---------------------------------------------------------------------------
+class TestSetVolume:
+    def _make_mock_volume(self):
+        """Return a MagicMock that stands in for IAudioEndpointVolume."""
+        return MagicMock()
+
+    def test_happy_path_sets_correct_level(self):
+        mock_vol = self._make_mock_volume()
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = set_volume(60)
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(0.60, None)
+        assert "60%" in result
+
+    def test_clamps_level_above_100(self):
+        mock_vol = self._make_mock_volume()
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = set_volume(150)
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(1.0, None)
+        assert "100%" in result
+
+    def test_clamps_level_below_0(self):
+        mock_vol = self._make_mock_volume()
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = set_volume(-20)
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(0.0, None)
+        assert "0%" in result
+
+    def test_exception_returns_graceful_error(self):
+        with patch(
+            "app.backend.tools.system_tools._get_master_volume_interface",
+            side_effect=RuntimeError("COM failure"),
+        ):
+            result = set_volume(50)
+        assert "Failed to set volume" in result
+        assert "COM failure" in result
+
+
+# ---------------------------------------------------------------------------
+# adjust_volume
+# ---------------------------------------------------------------------------
+class TestAdjustVolume:
+    def _make_mock_volume(self, current_scalar: float):
+        mock_vol = MagicMock()
+        mock_vol.GetMasterVolumeLevelScalar.return_value = current_scalar
+        return mock_vol
+
+    def test_direction_up_increases_by_10(self):
+        mock_vol = self._make_mock_volume(0.50)
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = adjust_volume("up")
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(0.60, None)
+        assert "increased" in result
+        assert "60%" in result
+
+    def test_direction_down_decreases_by_10(self):
+        mock_vol = self._make_mock_volume(0.50)
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = adjust_volume("down")
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(0.40, None)
+        assert "decreased" in result
+        assert "40%" in result
+
+    def test_clamps_to_100_when_near_max(self):
+        mock_vol = self._make_mock_volume(0.95)
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = adjust_volume("up")
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(1.0, None)
+        assert "100%" in result
+
+    def test_clamps_to_0_when_near_min(self):
+        mock_vol = self._make_mock_volume(0.05)
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = adjust_volume("down")
+        mock_vol.SetMasterVolumeLevelScalar.assert_called_once_with(0.0, None)
+        assert "0%" in result
+
+    def test_invalid_direction_returns_error_message(self):
+        mock_vol = self._make_mock_volume(0.50)
+        with patch("app.backend.tools.system_tools._get_master_volume_interface", return_value=mock_vol):
+            result = adjust_volume("sideways")
+        assert "Invalid direction" in result
+        mock_vol.SetMasterVolumeLevelScalar.assert_not_called()
+
+    def test_exception_returns_graceful_error(self):
+        with patch(
+            "app.backend.tools.system_tools._get_master_volume_interface",
+            side_effect=RuntimeError("COM gone"),
+        ):
+            result = adjust_volume("up")
+        assert "Failed to adjust volume" in result
+        assert "COM gone" in result
+
+
+# ---------------------------------------------------------------------------
+# mute_unmute_mic
+# ---------------------------------------------------------------------------
+class TestMuteUnmuteMic:
+    def _make_mic_chain(self, current_mute: bool):
+        """
+        Build the mock chain:
+          AudioUtilities.GetMicrophone() → raw_mic (IMMDevice)
+          raw_mic.Activate(...)          → iface
+          iface.QueryInterface(...)      → volume_ctl
+          volume_ctl.GetMute()           → current_mute
+        """
+        volume_ctl = MagicMock()
+        volume_ctl.GetMute.return_value = current_mute
+
+        iface = MagicMock()
+        iface.QueryInterface.return_value = volume_ctl
+
+        raw_mic = MagicMock()
+        raw_mic.Activate.return_value = iface
+
+        return raw_mic, volume_ctl
+
+    def test_unmuted_mic_becomes_muted(self):
+        raw_mic, volume_ctl = self._make_mic_chain(current_mute=False)
+        import sys
+        sys.modules["pycaw.pycaw"].AudioUtilities.GetMicrophone.return_value = raw_mic
+        result = mute_unmute_mic()
+        volume_ctl.SetMute.assert_called_once_with(True, None)
+        assert "Microphone muted" in result
+
+    def test_muted_mic_becomes_unmuted(self):
+        raw_mic, volume_ctl = self._make_mic_chain(current_mute=True)
+        import sys
+        sys.modules["pycaw.pycaw"].AudioUtilities.GetMicrophone.return_value = raw_mic
+        result = mute_unmute_mic()
+        volume_ctl.SetMute.assert_called_once_with(False, None)
+        assert "Microphone unmuted" in result
+
+    def test_no_microphone_returns_graceful_message(self):
+        import sys
+        sys.modules["pycaw.pycaw"].AudioUtilities.GetMicrophone.return_value = None
+        result = mute_unmute_mic()
+        assert "No default microphone" in result
+
+    def test_exception_returns_graceful_error(self):
+        import sys
+        sys.modules["pycaw.pycaw"].AudioUtilities.GetMicrophone.side_effect = RuntimeError("no audio")
+        result = mute_unmute_mic()
+        assert "Failed to toggle microphone mute" in result
+        assert "no audio" in result
+        # Reset side_effect so it does not bleed into other tests
+        sys.modules["pycaw.pycaw"].AudioUtilities.GetMicrophone.side_effect = None
+
+
+# ---------------------------------------------------------------------------
+# set_brightness
+# ---------------------------------------------------------------------------
+class TestSetBrightness:
+    def test_happy_path_sets_correct_level(self):
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = set_brightness(70)
+        sbc.set_brightness.assert_called_once_with(70)
+        assert "70%" in result
+
+    def test_clamps_level_above_100(self):
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = set_brightness(120)
+        sbc.set_brightness.assert_called_once_with(100)
+        assert "100%" in result
+
+    def test_clamps_level_below_0(self):
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = set_brightness(-10)
+        sbc.set_brightness.assert_called_once_with(0)
+        assert "0%" in result
+
+    def test_exception_returns_graceful_error(self):
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.side_effect = RuntimeError("driver error")
+        result = set_brightness(50)
+        assert "Failed to set brightness" in result
+        assert "driver error" in result
+        sbc.set_brightness.side_effect = None
+
+
+# ---------------------------------------------------------------------------
+# adjust_brightness
+# ---------------------------------------------------------------------------
+class TestAdjustBrightness:
+    def _set_current(self, level: int):
+        """Configure the sbc stub so get_brightness() returns [level]."""
+        import sys
+        sys.modules["screen_brightness_control"].get_brightness.return_value = [level]
+
+    def test_direction_up_increases_by_10(self):
+        self._set_current(50)
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = adjust_brightness("up")
+        sbc.set_brightness.assert_called_once_with(60)
+        assert "increased" in result
+        assert "60%" in result
+
+    def test_direction_down_decreases_by_10(self):
+        self._set_current(50)
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = adjust_brightness("down")
+        sbc.set_brightness.assert_called_once_with(40)
+        assert "decreased" in result
+        assert "40%" in result
+
+    def test_empty_get_brightness_falls_back_to_default_50(self):
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.get_brightness.return_value = []
+        sbc.set_brightness.reset_mock()
+        result = adjust_brightness("up")
+        # default current=50 → up → 60
+        sbc.set_brightness.assert_called_once_with(60)
+        assert "60%" in result
+
+    def test_clamps_to_100_when_near_max(self):
+        self._set_current(95)
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = adjust_brightness("up")
+        sbc.set_brightness.assert_called_once_with(100)
+        assert "100%" in result
+
+    def test_clamps_to_0_when_near_min(self):
+        self._set_current(5)
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = adjust_brightness("down")
+        sbc.set_brightness.assert_called_once_with(0)
+        assert "0%" in result
+
+    def test_invalid_direction_returns_error_message(self):
+        self._set_current(50)
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.set_brightness.reset_mock()
+        result = adjust_brightness("left")
+        assert "Invalid direction" in result
+        sbc.set_brightness.assert_not_called()
+
+    def test_exception_returns_graceful_error(self):
+        import sys
+        sbc = sys.modules["screen_brightness_control"]
+        sbc.get_brightness.side_effect = RuntimeError("wmi failure")
+        result = adjust_brightness("up")
+        assert "Failed to adjust brightness" in result
+        assert "wmi failure" in result
+        sbc.get_brightness.side_effect = None
+

@@ -74,3 +74,235 @@ def get_all_windows() -> str:
     if not windows:
         return "No open windows detected."
     return "Open windows:\n" + "\n".join(f"- {w}" for w in windows)
+
+
+# ---------------------------------------------------------------------------
+# Volume & audio controls (pycaw)
+# ---------------------------------------------------------------------------
+
+def _get_master_volume_interface():
+    """Return the IAudioEndpointVolume COM interface for the default speaker.
+
+    In pycaw>=20251023, AudioUtilities.GetSpeakers() returns an AudioDevice
+    wrapper object, not a raw COM IMMDevice. The wrapper exposes an
+    .EndpointVolume property that performs the Activate+QueryInterface
+    internally (pycaw/utils.py AudioDevice.EndpointVolume). Calling .Activate()
+    directly on AudioDevice raises AttributeError — hence the old code broke.
+    """
+    from pycaw.pycaw import AudioUtilities
+
+    return AudioUtilities.GetSpeakers().EndpointVolume
+
+
+@tool
+def set_volume(level: int) -> str:
+    """Sets the system master volume to an exact percentage between 0 and 100.
+    Use this when the user says something like 'set volume to 60' or 'volume at 80 percent'."""
+    try:
+        level = max(0, min(100, level))
+        volume = _get_master_volume_interface()
+        volume.SetMasterVolumeLevelScalar(level / 100.0, None)
+        return f"Volume set to {level}%."
+    except Exception as e:
+        log_error("tool:set_volume", e)
+        return f"Failed to set volume: {e}"
+
+
+@tool
+def adjust_volume(direction: str) -> str:
+    """Adjusts the system master volume up or down by 10 percentage points.
+    'direction' must be either 'up' or 'down'.
+    Use this when the user says 'turn up the volume', 'lower the volume', etc."""
+    try:
+        direction = direction.strip().lower()
+        if direction not in ("up", "down"):
+            return "Invalid direction. Use 'up' or 'down'."
+
+        volume = _get_master_volume_interface()
+        current = round(volume.GetMasterVolumeLevelScalar() * 100)
+        step = 10 if direction == "up" else -10
+        new_level = max(0, min(100, current + step))
+        volume.SetMasterVolumeLevelScalar(new_level / 100.0, None)
+
+        verb = "increased" if direction == "up" else "decreased"
+        return f"Volume {verb} to {new_level}%."
+    except Exception as e:
+        log_error("tool:adjust_volume", e)
+        return f"Failed to adjust volume: {e}"
+
+
+@tool
+def mute_unmute_mic() -> str:
+    """Toggles the default microphone between muted and unmuted.
+    Use this when the user says 'mute my mic', 'unmute microphone', etc."""
+    try:
+        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+        from comtypes import CLSCTX_ALL
+
+        mic = AudioUtilities.GetMicrophone()
+        if mic is None:
+            return "No default microphone detected."
+
+        interface = mic.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        volume = interface.QueryInterface(IAudioEndpointVolume)
+
+        current_mute = volume.GetMute()
+        new_mute = not current_mute
+        volume.SetMute(new_mute, None)
+
+        state = "muted" if new_mute else "unmuted"
+        return f"Microphone {state}."
+    except Exception as e:
+        log_error("tool:mute_unmute_mic", e)
+        return f"Failed to toggle microphone mute: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Camera privacy toggle (Windows registry — UAC-elevated subprocess)
+# ---------------------------------------------------------------------------
+
+_CAMERA_REG_KEY = (
+    r"SOFTWARE\Microsoft\Windows\CurrentVersion"
+    r"\CapabilityAccessManager\ConsentStore\webcam"
+)
+_CAMERA_REG_PATH_FULL = (
+    r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion"
+    r"\CapabilityAccessManager\ConsentStore\webcam"
+)
+
+# ShellExecuteW return codes that indicate the UAC prompt was declined or the
+# operation was blocked before the elevated process could start.
+_SE_ACCESS_DENIED  = 5   # ERROR_ACCESS_DENIED — UAC declined
+_SE_CANCELLED      = 42  # ERROR_CANCELLED — user pressed "No" on UAC dialog
+
+
+@tool
+def mute_unmute_camera() -> str:
+    """Toggles the Windows camera privacy setting on or off.
+    Reads current state from HKLM (no elevation needed), then writes the new
+    value via an elevated reg.exe subprocess triggered by a UAC prompt — so
+    only this one action requests admin rights; the rest of the app stays
+    unprivileged.
+    Use this when the user says 'disable camera', 'block camera access', 'enable camera', etc."""
+    import winreg
+    import ctypes
+    import time
+
+    try:
+        # ── 1. Read current state (unprivileged) ──────────────────────────────
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            _CAMERA_REG_KEY,
+            0,
+            winreg.KEY_READ,
+        ) as key:
+            current_value, _ = winreg.QueryValueEx(key, "Value")
+
+        new_value = "Deny" if current_value == "Allow" else "Allow"
+
+        # ── 2. Write via ShellExecuteW "runas" (triggers UAC prompt) ──────────
+        # reg.exe is a built-in Windows tool; no external dep required.
+        reg_cmd = (
+            f'add "{_CAMERA_REG_PATH_FULL}"'
+            f' /v Value /t REG_SZ /d {new_value} /f'
+        )
+
+        # ShellExecuteW returns an HINSTANCE (>32 = success, ≤32 = error code).
+        # We call it with nShowCmd=0 (SW_HIDE) so no console window flashes.
+        ret = ctypes.windll.shell32.ShellExecuteW(
+            None,       # hwnd
+            "runas",    # lpVerb — triggers UAC elevation
+            "reg.exe",  # lpFile
+            reg_cmd,    # lpParameters
+            None,       # lpDirectory
+            0,          # nShowCmd: SW_HIDE
+        )
+
+        if ret in (_SE_ACCESS_DENIED, _SE_CANCELLED):
+            return "Camera toggle cancelled — UAC prompt was declined."
+
+        if ret <= 32:
+            # Other ShellExecute error codes (e.g. file not found, no assoc)
+            return f"Camera toggle failed: ShellExecuteW error code {ret}."
+
+        # ── 3. Wait for reg.exe to finish ────────────────────────────────────
+        # ShellExecuteW doesn't give us a process handle, so we poll the
+        # registry value until it flips (or time out after ~5 s).
+        deadline = time.monotonic() + 5.0
+        confirmed = False
+        while time.monotonic() < deadline:
+            time.sleep(0.15)
+            try:
+                with winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    _CAMERA_REG_KEY,
+                    0,
+                    winreg.KEY_READ,
+                ) as key:
+                    actual, _ = winreg.QueryValueEx(key, "Value")
+                if actual == new_value:
+                    confirmed = True
+                    break
+            except OSError:
+                pass  # key briefly unavailable during write — keep polling
+
+        if not confirmed:
+            return (
+                "Camera toggle requested but the registry change couldn't be "
+                "confirmed in time — UAC may have been dismissed, or the "
+                "system took longer than expected."
+            )
+
+        state = "disabled (camera access denied)" if new_value == "Deny" else "enabled (camera access allowed)"
+        return f"Camera privacy setting updated: camera is now {state}."
+
+    except Exception as e:
+        log_error("tool:mute_unmute_camera", e)
+        return f"Failed to toggle camera privacy setting: {e}"
+
+
+
+# ---------------------------------------------------------------------------
+# Brightness controls (screen-brightness-control)
+# ---------------------------------------------------------------------------
+
+@tool
+def set_brightness(level: int) -> str:
+    """Sets the screen brightness to an exact percentage between 0 and 100.
+    Use this when the user says 'set brightness to 70' or 'brightness at 50 percent'."""
+    try:
+        import screen_brightness_control as sbc
+
+        level = max(0, min(100, level))
+        sbc.set_brightness(level)
+        return f"Brightness set to {level}%."
+    except Exception as e:
+        log_error("tool:set_brightness", e)
+        return f"Failed to set brightness: {e}"
+
+
+@tool
+def adjust_brightness(direction: str) -> str:
+    """Adjusts the screen brightness up or down by 10 percentage points.
+    'direction' must be either 'up' or 'down'.
+    Use this when the user says 'increase brightness', 'dim the screen', etc."""
+    try:
+        import screen_brightness_control as sbc
+
+        direction = direction.strip().lower()
+        if direction not in ("up", "down"):
+            return "Invalid direction. Use 'up' or 'down'."
+
+        # get_brightness() returns a list; take the first monitor's value.
+        current_levels = sbc.get_brightness()
+        current = current_levels[0] if current_levels else 50
+
+        step = 10 if direction == "up" else -10
+        new_level = max(0, min(100, current + step))
+        sbc.set_brightness(new_level)
+
+        verb = "increased" if direction == "up" else "decreased"
+        return f"Brightness {verb} to {new_level}%."
+    except Exception as e:
+        log_error("tool:adjust_brightness", e)
+        return f"Failed to adjust brightness: {e}"

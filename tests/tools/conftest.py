@@ -72,3 +72,20 @@ for _ext_mod in ("psutil", "pyperclip", "pygetwindow", "pyautogui"):
 # available (used by test_web_tools for requests.exceptions.*), so we only
 # stub ddgs which is not installed in the system python.
 _stub("ddgs")
+
+# ---------------------------------------------------------------------------
+# pycaw — used inside mute_unmute_mic (local import inside function body).
+# We stub the whole pycaw hierarchy so the `from pycaw.pycaw import ...`
+# inside the tool function resolves without the real COM stack.
+# Individual tests then patch pycaw.pycaw.AudioUtilities etc. at call-time.
+# ---------------------------------------------------------------------------
+for _pycaw_mod in ("pycaw", "pycaw.pycaw", "pycaw.api", "pycaw.utils", "comtypes"):
+    _stub(_pycaw_mod)
+
+# ---------------------------------------------------------------------------
+# screen_brightness_control — imported locally inside set_brightness /
+# adjust_brightness.  Individual tests patch .set_brightness / .get_brightness
+# on the already-registered stub at call-time.
+# ---------------------------------------------------------------------------
+_stub("screen_brightness_control")
+
