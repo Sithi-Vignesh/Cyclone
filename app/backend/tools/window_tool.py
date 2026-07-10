@@ -187,3 +187,56 @@ def focus_window(app_name: str) -> str:
     except Exception as e:
         log_error("tool:focus_window", e)
         return f"Failed to focus '{app_name}': {e}"
+
+
+# ---------------------------------------------------------------------------
+# split_screen
+# ---------------------------------------------------------------------------
+
+@tool
+def split_screen(left_window: str = "", right_window: str = "") -> str:
+    """Arranges windows side-by-side using Windows Snap Assist (Win+Z).
+    Use this when the user says 'split screen', 'snap chrome to the left and edge to the right', etc."""
+    try:
+        left_window = left_window.strip()
+        right_window = right_window.strip()
+
+        if not left_window and not right_window:
+            pyautogui.hotkey("win", "z")
+            time.sleep(0.3)
+            pyautogui.press("1")
+            return "Split screen activated (default 2-pane)."
+        
+        elif left_window and right_window:
+            right_app = _connect_by_title(right_window)
+            if right_app is None:
+                return f"Couldn't find right window matching '{right_window}'."
+            
+            left_app = _connect_by_title(left_window)
+            if left_app is None:
+                return f"Couldn't find left window matching '{left_window}'."
+
+            right_app.top_window().set_focus()
+            time.sleep(0.1) # small delay to ensure focus is registered
+            left_app.top_window().set_focus()
+            
+            pyautogui.hotkey("win", "z")
+            time.sleep(0.3)
+            pyautogui.press("1")
+            return f"Split screen: {left_window} left, {right_window} right."
+
+        else:
+            target = left_window or right_window
+            app = _connect_by_title(target)
+            if app is None:
+                return f"Couldn't find window matching '{target}'."
+            
+            app.top_window().set_focus()
+            pyautogui.hotkey("win", "z")
+            time.sleep(0.3)
+            pyautogui.press("1")
+            return f"Split screen: {target} brought to front, paired with last-active window."
+            
+    except Exception as e:
+        log_error("tool:split_screen", e)
+        return f"Failed to activate split screen: {e}"

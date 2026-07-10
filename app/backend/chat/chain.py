@@ -15,7 +15,7 @@ from app.backend.core.queue import reminder_queue
 from app.backend.mood.mood_log import log_mood
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows, set_volume, adjust_volume, mute_unmute_mic, set_brightness, adjust_brightness
 from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary, get_behavior_summary, get_exam_stress_summary
-from app.backend.tools.window_tool import minimize_window, maximize_window, close_window, focus_window
+from app.backend.tools.window_tool import minimize_window, maximize_window, close_window, focus_window, split_screen
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 from app.backend.chat.agent import agent_executor
@@ -49,6 +49,7 @@ tool_registry = {
     "maximize_window": maximize_window,
     "close_window": close_window,
     "focus_window": focus_window,
+    "split_screen": split_screen,
 }
 
 def clean_message(text):
