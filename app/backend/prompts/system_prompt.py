@@ -42,6 +42,13 @@ Available tools:
 - open_application: opens an app by name (e.g. notepad, chrome, code). Use parameter: {{"app_name": "<name>"}}
 - open_file: opens a file by its full path. Use parameter: {{"file_name": "<path>"}}
 - spotify_play_song: searches and plays a song on Spotify. Use parameter: {{"song_name": "<artist and song name>"}}
+- spotify_play_pause: toggles play/pause for whatever is currently playing (Spotify or otherwise). Works even if backgrounded. No parameters needed. Use parameter: {{}}
+- spotify_next_track: skips to the next track for whatever is currently playing. Works even if backgrounded. No parameters needed. Use parameter: {{}}
+- spotify_previous_track: goes to the previous track for whatever is currently playing. Works even if backgrounded. No parameters needed. Use parameter: {{}}
+- spotify_toggle_shuffle: toggles shuffle mode on Spotify. No parameters needed. Use parameter: {{}}
+- spotify_toggle_repeat: toggles repeat mode on Spotify. No parameters needed. Use parameter: {{}}
+- spotify_like_current_song: likes the current song on Spotify. No parameters needed. Use parameter: {{}}
+- spotify_play_liked_songs: plays the Liked Songs playlist on Spotify. No parameters needed. Use parameter: {{}}
 - get_battery_status: returns current battery percentage and charging status. No parameters needed. Use parameter: {{}}
 - get_weather: returns current weather for a city. Use parameter: {{"city": "<city name>"}}
 - web_search: searches the web using DuckDuckGo and returns top 3 results. Use parameter: {{"query": "<search query>"}}
@@ -69,6 +76,13 @@ Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
 - If the user says "open X" and X is a file path → tool_name = "open_file", parameters = {{"file_name": "X"}}
 - If the user says "play X on Spotify" or "open Spotify and play X" → first tool_name = "open_application" with {{"app_name": "spotify"}}, then tool_name = "spotify_play_song" with {{"song_name": "X"}}
+- If the user says "pause Spotify", "play Spotify", or "resume music" → tool_name = "spotify_play_pause", parameters = {{}}
+- If the user says "skip this song", "next track" → tool_name = "spotify_next_track", parameters = {{}}
+- If the user says "previous song", "go back a track" → tool_name = "spotify_previous_track", parameters = {{}}
+- If the user says "shuffle Spotify" → tool_name = "spotify_toggle_shuffle", parameters = {{}}
+- If the user says "repeat this song" → tool_name = "spotify_toggle_repeat", parameters = {{}}
+- If the user says "like this song" → tool_name = "spotify_like_current_song", parameters = {{}}
+- If the user says "play my liked songs" → tool_name = "spotify_play_liked_songs", parameters = {{}}
 - If the user asks about battery → tool_name = "get_battery_status", parameters = {{}}
 - If the user asks about weather in a city → tool_name = "get_weather", parameters = {{"city": "<city>"}}
 - If the user asks about weather without specifying a city → assume Vellore.

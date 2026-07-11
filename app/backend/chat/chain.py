@@ -16,7 +16,16 @@ from app.backend.mood.mood_log import log_mood
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows, set_volume, adjust_volume, mute_unmute_mic, set_brightness, adjust_brightness
 from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary, get_behavior_summary, get_exam_stress_summary
 from app.backend.tools.window_tool import minimize_window, maximize_window, close_window, focus_window, split_screen, show_task_view
-from app.backend.tools.spotify_tools import spotify_play_song
+from app.backend.tools.spotify_tools import (
+    spotify_play_song,
+    spotify_play_pause,
+    spotify_next_track,
+    spotify_previous_track,
+    spotify_toggle_shuffle,
+    spotify_toggle_repeat,
+    spotify_like_current_song,
+    spotify_play_liked_songs
+)
 from app.backend.tools.web_tools import get_weather, web_search
 from app.backend.chat.agent import agent_executor
 from openai import RateLimitError
@@ -29,6 +38,13 @@ tool_registry = {
     "open_application": open_application,
     "open_file": open_file,
     "spotify_play_song": spotify_play_song,
+    "spotify_play_pause": spotify_play_pause,
+    "spotify_next_track": spotify_next_track,
+    "spotify_previous_track": spotify_previous_track,
+    "spotify_toggle_shuffle": spotify_toggle_shuffle,
+    "spotify_toggle_repeat": spotify_toggle_repeat,
+    "spotify_like_current_song": spotify_like_current_song,
+    "spotify_play_liked_songs": spotify_play_liked_songs,
     "get_battery_status": get_battery_status,
     "get_weather": get_weather,
     "web_search": web_search,

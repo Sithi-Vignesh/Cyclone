@@ -26,10 +26,9 @@ class TestSpotifyPlaySong:
         """If Spotify connects immediately, type_keys are sent and success returned."""
         mock_app, mock_window = _make_app_and_window()
         with (
-            patch("app.backend.tools.spotify_tools.Application") as MockApp,
+            patch("app.backend.tools.spotify_tools._connect_spotify_window", return_value=mock_app),
             patch("app.backend.tools.spotify_tools.time.sleep"),
         ):
-            MockApp.return_value.connect.return_value = mock_app
             result = spotify_play_song("Blinding Lights")
 
         assert "Blinding Lights" in result
@@ -37,14 +36,11 @@ class TestSpotifyPlaySong:
 
     def test_returns_timeout_message_when_spotify_never_opens(self):
         """If Spotify window is never found within 30 retries, a friendly message is returned."""
-        from pywinauto.findwindows import ElementNotFoundError
-
         with (
-            patch("app.backend.tools.spotify_tools.Application") as MockApp,
+            patch("app.backend.tools.spotify_tools._connect_spotify_window", return_value=None),
+            patch("app.backend.tools.spotify_tools.open_application"),
             patch("app.backend.tools.spotify_tools.time.sleep"),
         ):
-            # connect() always raises ElementNotFoundError
-            MockApp.return_value.connect.side_effect = ElementNotFoundError
             result = spotify_play_song("Levitating")
 
         assert "didn't open" in result.lower() or "try again" in result.lower()
@@ -60,10 +56,9 @@ class TestSpotifyPlaySong:
         mock_app.top_window.side_effect = RuntimeError("window gone")
 
         with (
-            patch("app.backend.tools.spotify_tools.Application") as MockApp,
+            patch("app.backend.tools.spotify_tools._connect_spotify_window", return_value=mock_app),
             patch("app.backend.tools.spotify_tools.time.sleep"),
         ):
-            MockApp.return_value.connect.return_value = mock_app
             result = spotify_play_song("Shape of You")
 
-        assert "ran into an issue" in result.lower() or "try again" in result.lower()
+        assert "failed to play" in result.lower()
