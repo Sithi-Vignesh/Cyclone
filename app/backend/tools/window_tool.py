@@ -246,3 +246,19 @@ def split_screen(left_window: str = "", right_window: str = "") -> str:
     except Exception as e:
         log_error("tool:split_screen", e)
         return f"Failed to activate split screen: {e}"
+
+
+# ---------------------------------------------------------------------------
+# show_task_view
+# ---------------------------------------------------------------------------
+
+@tool
+def show_task_view() -> str:
+    """Opens Windows Task View (Win+Tab), showing all open windows and virtual desktops.
+    Use this when the user says 'show task view', 'show all windows', 'task view', etc."""
+    try:
+        pyautogui.hotkey("win", "tab")
+        return "Opened Task View."
+    except Exception as e:
+        log_error("tool:show_task_view", e)
+        return f"Failed to open Task View: {e}"

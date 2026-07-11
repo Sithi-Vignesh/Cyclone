@@ -3,7 +3,7 @@ from app.backend.core.llm import agent_llm
 from datetime import datetime
 from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows, set_volume, adjust_volume, mute_unmute_mic, set_brightness, adjust_brightness
 from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary
-from app.backend.tools.window_tool import minimize_window, maximize_window, close_window, focus_window, split_screen
+from app.backend.tools.window_tool import minimize_window, maximize_window, close_window, focus_window, split_screen, show_task_view
 from app.backend.tools.spotify_tools import spotify_play_song
 from app.backend.tools.web_tools import get_weather, web_search
 
@@ -30,6 +30,7 @@ tools = [
     close_window,
     focus_window,
     split_screen,
+    show_task_view,
 ]
 
 agent_executor = create_react_agent(

@@ -63,6 +63,7 @@ Available tools:
 - close_window: closes a named window, or the currently active window if no name given. Use parameter: {{"app_name": "<name>"}} or {{"app_name": ""}}
 - focus_window: switches focus to a named window. app_name is required — do not call with an empty name. Use parameter: {{"app_name": "<name>"}}
 - split_screen: arranges windows side-by-side. Can take two named apps, one named app (paired with last-active), or none (defaults to snapping active window). Use parameter: {{"left_window": "<name>", "right_window": "<name>"}} (both optional)
+- show_task_view: Opens Windows Task View to show all open windows and virtual desktops. No parameters needed. Use parameter: {{}}
 
 Rules:
 - If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
@@ -101,6 +102,7 @@ Rules:
 - If the user says "close this" / "close the window" with no specific app named → tool_name = "close_window", parameters = {{"app_name": ""}}
 - If the user asks to switch to / focus / bring up a specific app/window → tool_name = "focus_window", parameters = {{"app_name": "<name>"}}
 - If the user asks to split the screen, snap windows, or put apps side-by-side → tool_name = "split_screen", parameters = {{"left_window": "<left app name>", "right_window": "<right app name>"}}. Omit names if not specified.
+- If the user says "show task view", "show all windows", or asks to see task view → tool_name = "show_task_view", parameters = {{}}
 </tools>
 
 <reminders>

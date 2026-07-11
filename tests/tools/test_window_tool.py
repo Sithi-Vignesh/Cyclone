@@ -37,6 +37,7 @@ from app.backend.tools.window_tool import (
     _connect_by_title,
     _active_window_title,
     split_screen,
+    show_task_view,
 )
 
 # Pull the real ElementNotFoundError class that conftest registered.
@@ -479,3 +480,31 @@ class TestSplitScreen:
             
         assert result.startswith("Failed to activate split screen:")
         assert "boom" in result
+
+
+# ---------------------------------------------------------------------------
+# show_task_view
+# ---------------------------------------------------------------------------
+
+class TestShowTaskView:
+    def test_success_case(self):
+        """Win+Tab is pressed, no window lookup."""
+        with (
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool._connect_by_title") as mock_connect,
+        ):
+            result = show_task_view()
+            
+        mock_hk.assert_called_once_with("win", "tab")
+        mock_connect.assert_not_called()
+        assert result == "Opened Task View."
+
+    def test_exception_safety(self):
+        """Force pyautogui.hotkey to raise, should catch and return error string."""
+        with (
+            patch("app.backend.tools.window_tool.pyautogui.hotkey", side_effect=RuntimeError("tab failed")),
+        ):
+            result = show_task_view()
+            
+        assert result.startswith("Failed to open Task View:")
+        assert "tab failed" in result
