@@ -36,6 +36,7 @@ from app.backend.tools.window_tool import (
     focus_window,
     _connect_by_title,
     _active_window_title,
+    split_screen,
 )
 
 # Pull the real ElementNotFoundError class that conftest registered.
@@ -323,3 +324,158 @@ class TestFocusWindow:
             result = focus_window("notepad")
         assert "Failed" in result
         assert "com error" in result              # MUST be non-empty — catches the original bug
+
+
+# ---------------------------------------------------------------------------
+# split_screen
+# ---------------------------------------------------------------------------
+
+class TestSplitScreen:
+    def test_default_mode_sends_hotkey(self):
+        """No windows specified -> Win+Z, 1."""
+        with (
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.pyautogui.press") as mock_press,
+            patch("app.backend.tools.window_tool._connect_by_title") as mock_connect,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            result = split_screen()
+        mock_hk.assert_called_once_with("win", "z")
+        mock_press.assert_called_once_with("1")
+        mock_connect.assert_not_called()
+        assert result == "Split screen activated (default 2-pane)."
+
+    def test_named_mode_both_windows_found(self):
+        left_app, left_win = _make_app_mock()
+        right_app, right_win = _make_app_mock()
+
+        def mock_connect(name):
+            if name == "chrome": return right_app
+            if name == "notepad": return left_app
+            return None
+
+        mock_manager = MagicMock()
+        mock_manager.attach_mock(right_win.set_focus, 'right_focus')
+        mock_manager.attach_mock(left_win.set_focus, 'left_focus')
+
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", side_effect=mock_connect) as mock_connect_call,
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.pyautogui.press") as mock_press,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            mock_manager.attach_mock(mock_hk, 'hotkey')
+            mock_manager.attach_mock(mock_press, 'press')
+            
+            result = split_screen(left_window="notepad", right_window="chrome")
+
+        assert mock_connect_call.call_count == 2
+        mock_connect_call.assert_has_calls([call("chrome"), call("notepad")])
+
+        expected_calls = [
+            call.right_focus(),
+            call.left_focus(),
+            call.hotkey('win', 'z'),
+            call.press('1')
+        ]
+        assert mock_manager.mock_calls == expected_calls
+        assert result == "Split screen: notepad left, chrome right."
+
+    def test_named_mode_right_window_not_found(self):
+        left_app, _ = _make_app_mock()
+
+        def mock_connect(name):
+            if name == "notepad": return left_app
+            return None
+
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", side_effect=mock_connect),
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.pyautogui.press") as mock_press,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            result = split_screen(left_window="notepad", right_window="ghost")
+
+        assert result == "Couldn't find right window matching 'ghost'."
+        mock_hk.assert_not_called()
+
+    def test_named_mode_left_window_not_found(self):
+        right_app, _ = _make_app_mock()
+
+        def mock_connect(name):
+            if name == "chrome": return right_app
+            return None
+
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", side_effect=mock_connect),
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.pyautogui.press") as mock_press,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            result = split_screen(left_window="ghost", right_window="chrome")
+
+        assert result == "Couldn't find left window matching 'ghost'."
+        mock_hk.assert_not_called()
+
+    def test_partial_mode_left_only(self):
+        app_mock, win_mock = _make_app_mock()
+
+        mock_manager = MagicMock()
+        mock_manager.attach_mock(win_mock.set_focus, 'focus')
+
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", return_value=app_mock) as mock_connect,
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.pyautogui.press") as mock_press,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            mock_manager.attach_mock(mock_hk, 'hotkey')
+            mock_manager.attach_mock(mock_press, 'press')
+
+            result = split_screen(left_window="notepad")
+
+        mock_connect.assert_called_once_with("notepad")
+        
+        expected_calls = [
+            call.focus(),
+            call.hotkey('win', 'z'),
+            call.press('1')
+        ]
+        assert mock_manager.mock_calls == expected_calls
+        assert result == "Split screen: notepad brought to front, paired with last-active window."
+
+    def test_partial_mode_right_only(self):
+        app_mock, win_mock = _make_app_mock()
+
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", return_value=app_mock) as mock_connect,
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.pyautogui.press") as mock_press,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            result = split_screen(right_window="chrome")
+
+        mock_connect.assert_called_once_with("chrome")
+        assert result == "Split screen: chrome brought to front, paired with last-active window."
+
+    def test_partial_mode_window_not_found(self):
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", return_value=None),
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            result = split_screen(left_window="ghost")
+
+        assert result == "Couldn't find window matching 'ghost'."
+        mock_hk.assert_not_called()
+
+    def test_exception_safety(self):
+        with (
+            patch("app.backend.tools.window_tool._connect_by_title", side_effect=RuntimeError("boom")),
+            patch("app.backend.tools.window_tool.pyautogui.hotkey") as mock_hk,
+            patch("app.backend.tools.window_tool.time.sleep"),
+        ):
+            result = split_screen(left_window="notepad")
+            
+        assert result.startswith("Failed to activate split screen:")
+        assert "boom" in result
