@@ -206,20 +206,25 @@ def split_screen(left_window: str = "", right_window: str = "") -> str:
             time.sleep(0.3)
             pyautogui.press("1")
             return "Split screen activated (default 2-pane)."
-        
+
         elif left_window and right_window:
             right_app = _connect_by_title(right_window)
             if right_app is None:
                 return f"Couldn't find right window matching '{right_window}'."
-            
+
             left_app = _connect_by_title(left_window)
             if left_app is None:
                 return f"Couldn't find left window matching '{left_window}'."
 
+            # Focus right first, then left — left must be focused LAST so it
+            # becomes the OS's "current window" when Win+Z reads focus state.
             right_app.top_window().set_focus()
-            time.sleep(0.1) # small delay to ensure focus is registered
+            time.sleep(0.4)
             left_app.top_window().set_focus()
-            
+            time.sleep(0.4)  # let the OS fully register left as current
+            # before Win+Z samples focus state — 0.1s was too short and let
+            # right_window still read as "current".
+
             pyautogui.hotkey("win", "z")
             time.sleep(0.3)
             pyautogui.press("1")
@@ -230,13 +235,14 @@ def split_screen(left_window: str = "", right_window: str = "") -> str:
             app = _connect_by_title(target)
             if app is None:
                 return f"Couldn't find window matching '{target}'."
-            
+
             app.top_window().set_focus()
+            time.sleep(0.4)
             pyautogui.hotkey("win", "z")
             time.sleep(0.3)
             pyautogui.press("1")
             return f"Split screen: {target} brought to front, paired with last-active window."
-            
+
     except Exception as e:
         log_error("tool:split_screen", e)
         return f"Failed to activate split screen: {e}"
