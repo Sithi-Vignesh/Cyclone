@@ -326,3 +326,65 @@ def take_screenshot() -> str:
     except Exception as e:
         log_error("tool:take_screenshot", str(e))
         return f"Failed to take screenshot: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Power controls
+# ---------------------------------------------------------------------------
+
+@tool
+def lock_screen() -> str:
+    """Locks the Windows screen.
+    Use this when the user says 'lock my pc', 'lock screen', etc."""
+    try:
+        pyautogui.hotkey('win', 'l')
+        return "Locked."
+    except Exception as e:
+        log_error("tool:lock_screen", str(e))
+        return f"Failed to lock screen: {e}"
+
+@tool
+def request_shutdown() -> str:
+    """Call this when Thunder first asks to shut down the computer, before any 
+    confirmation has happened. Generates a confirmation code."""
+    from app.backend.chat.confirmation import request_confirmation
+    token = request_confirmation("shutdown")
+    return f"Say the code {token} to confirm shutdown."
+
+@tool
+def request_restart() -> str:
+    """Call this when Thunder first asks to restart the computer, before any 
+    confirmation has happened. Generates a confirmation code."""
+    from app.backend.chat.confirmation import request_confirmation
+    token = request_confirmation("restart")
+    return f"Say the code {token} to confirm restart."
+
+@tool
+def shutdown_system(token: str) -> str:
+    """Shuts down the computer. Requires the exact numeric confirmation code 
+    Thunder was given by request_shutdown. Do not call this directly from a 
+    first-time shutdown request — call request_shutdown first."""
+    from app.backend.chat.confirmation import check_confirmation
+    if not check_confirmation("shutdown", token):
+        return "Confirmation failed or expired. Ask again."
+    try:
+        os.system("shutdown /s /t 0")
+        return "Shutting down now."
+    except Exception as e:
+        log_error("tool:shutdown_system", str(e))
+        return f"Failed to shut down system: {e}"
+
+@tool
+def restart_system(token: str) -> str:
+    """Restarts the computer. Requires the exact numeric confirmation code 
+    Thunder was given by request_restart. Do not call this directly from a 
+    first-time restart request — call request_restart first."""
+    from app.backend.chat.confirmation import check_confirmation
+    if not check_confirmation("restart", token):
+        return "Confirmation failed or expired. Ask again."
+    try:
+        os.system("shutdown /r /t 0")
+        return "Restarting now."
+    except Exception as e:
+        log_error("tool:restart_system", str(e))
+        return f"Failed to restart system: {e}"

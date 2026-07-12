@@ -13,7 +13,7 @@ from app.backend.scheduler.event_extractor import extract_event
 from app.backend.mood.interaction_log import log_interaction
 from app.backend.core.queue import reminder_queue
 from app.backend.mood.mood_log import log_mood
-from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows, set_volume, adjust_volume, mute_unmute_mic, set_brightness, adjust_brightness, take_screenshot
+from app.backend.tools.system_tools import open_application, open_file, get_battery_status, read_clipboard, get_active_window, get_all_windows, set_volume, adjust_volume, mute_unmute_mic, set_brightness, adjust_brightness, take_screenshot, lock_screen, shutdown_system, restart_system, request_shutdown, request_restart
 from app.backend.tools.memory_tools import delete_all_memory, get_upcoming_events, get_mood_summary, get_behavior_summary, get_exam_stress_summary
 from app.backend.tools.window_tool import minimize_window, maximize_window, close_window, focus_window, split_screen, show_task_view
 from app.backend.tools.folder_tools import open_folder
@@ -70,6 +70,11 @@ tool_registry = {
     "focus_window": focus_window,
     "split_screen": split_screen,
     "show_task_view": show_task_view,
+    "lock_screen": lock_screen,
+    "request_shutdown": request_shutdown,
+    "request_restart": request_restart,
+    "shutdown_system": shutdown_system,
+    "restart_system": restart_system,
 }
 
 def clean_message(text):
@@ -100,6 +105,20 @@ def invoke_chain(payload):
 
 def chat(query):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    from app.backend.chat.confirmation import get_pending
+    pending = get_pending()
+    if pending is not None and query.strip() == pending["token"]:
+        tool_fn = shutdown_system if pending["action"] == "shutdown" else restart_system
+        result = tool_fn.invoke({"token": query.strip()})
+        try:
+            store_episode(query, "Thunder")
+            store_episode(result, "Cyclone")
+        except Exception as e:
+            log_error("memory_logging_block", e)
+        history.append(HumanMessage(content=query))
+        history.append(AIMessage(content=result))
+        return result
 
     core_memory = load_core_memory()
     episodes = retrieve_episodes(query)

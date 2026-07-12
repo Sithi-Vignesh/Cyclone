@@ -524,3 +524,125 @@ class TestTakeScreenshot:
         
         assert result.startswith("Failed to take screenshot:")
         assert "test error" in result
+
+# ---------------------------------------------------------------------------
+# Power Controls
+# ---------------------------------------------------------------------------
+class TestPowerControls:
+    @patch("app.backend.tools.system_tools.pyautogui")
+    def test_lock_screen_calls_pyautogui(self, mock_pyautogui):
+        from app.backend.tools.system_tools import lock_screen
+        result = lock_screen()
+        mock_pyautogui.hotkey.assert_called_once_with('win', 'l')
+        assert result == "Locked."
+
+    def test_request_shutdown(self):
+        from app.backend.tools.system_tools import request_shutdown
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        result = request_shutdown()
+        assert "Say the code" in result
+        pending = confirmation.get_pending()
+        assert pending is not None
+        assert pending["action"] == "shutdown"
+        assert pending["token"] in result
+
+    def test_request_restart(self):
+        from app.backend.tools.system_tools import request_restart
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        result = request_restart()
+        assert "Say the code" in result
+        pending = confirmation.get_pending()
+        assert pending is not None
+        assert pending["action"] == "restart"
+        assert pending["token"] in result
+
+    @patch("app.backend.tools.system_tools.os.system")
+    def test_shutdown_unconfirmed(self, mock_os_system):
+        from app.backend.tools.system_tools import shutdown_system
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        result = shutdown_system(token="0000")
+        mock_os_system.assert_not_called()
+        assert "Confirmation failed" in result
+
+    @patch("app.backend.tools.system_tools.os.system")
+    def test_shutdown_confirmed(self, mock_os_system):
+        from app.backend.tools.system_tools import shutdown_system
+        from app.backend.chat import confirmation
+        token = confirmation.request_confirmation("shutdown")
+        result = shutdown_system(token=token)
+        mock_os_system.assert_called_once_with("shutdown /s /t 0")
+        assert result == "Shutting down now."
+        assert confirmation.get_pending() is None
+
+    @patch("app.backend.tools.system_tools.os.system")
+    def test_restart_unconfirmed(self, mock_os_system):
+        from app.backend.tools.system_tools import restart_system
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        result = restart_system(token="0000")
+        mock_os_system.assert_not_called()
+        assert "Confirmation failed" in result
+
+    @patch("app.backend.tools.system_tools.os.system")
+    def test_restart_confirmed(self, mock_os_system):
+        from app.backend.tools.system_tools import restart_system
+        from app.backend.chat import confirmation
+        token = confirmation.request_confirmation("restart")
+        result = restart_system(token=token)
+        mock_os_system.assert_called_once_with("shutdown /r /t 0")
+        assert result == "Restarting now."
+        assert confirmation.get_pending() is None
+
+class TestConfirmation:
+    def test_request_confirmation(self):
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        token = confirmation.request_confirmation("shutdown")
+        assert len(token) == 4
+        assert token.isdigit()
+        pending = confirmation.get_pending()
+        assert pending is not None
+        assert pending["action"] == "shutdown"
+        assert pending["token"] == token
+
+    @patch("app.backend.chat.confirmation.time")
+    def test_check_confirmation_success(self, mock_time):
+        import time
+        from app.backend.chat import confirmation
+        mock_time.time.return_value = 1000
+        confirmation.clear_confirmation()
+        token = confirmation.request_confirmation("shutdown")
+        assert confirmation.check_confirmation("shutdown", token) is True
+        assert confirmation.get_pending() is None
+
+    @patch("app.backend.chat.confirmation.time")
+    def test_check_confirmation_expired(self, mock_time):
+        from app.backend.chat import confirmation
+        mock_time.time.return_value = 1000
+        confirmation.clear_confirmation()
+        token = confirmation.request_confirmation("shutdown")
+        mock_time.time.return_value = 2000  # past 60s
+        assert confirmation.check_confirmation("shutdown", token) is False
+        assert confirmation.get_pending() is None
+
+    def test_check_confirmation_wrong_action(self):
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        token = confirmation.request_confirmation("shutdown")
+        assert confirmation.check_confirmation("restart", token) is False
+        assert confirmation.get_pending() is not None
+
+    def test_check_confirmation_wrong_token(self):
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        token = confirmation.request_confirmation("shutdown")
+        assert confirmation.check_confirmation("shutdown", "0000") is False
+        assert confirmation.get_pending() is not None
+
+    def test_check_confirmation_no_pending(self):
+        from app.backend.chat import confirmation
+        confirmation.clear_confirmation()
+        assert confirmation.check_confirmation("shutdown", "1234") is False

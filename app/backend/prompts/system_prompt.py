@@ -73,6 +73,10 @@ Available tools:
 - focus_window: switches focus to a named window. app_name is required — do not call with an empty name. Use parameter: {{"app_name": "<name>"}}
 - split_screen: arranges windows side-by-side. Can take two named apps, one named app (paired with last-active), or none (defaults to snapping active window). Use parameter: {{"left_window": "<name>", "right_window": "<name>"}} (both optional)
 - show_task_view: Opens Windows Task View to show all open windows and virtual desktops. No parameters needed. Use parameter: {{}}
+- lock_screen: locks the computer screen. No parameters needed. Use parameter: {{}}
+- request_shutdown: call this when Thunder first asks to shut down, before any confirmation exists. No parameters. Use parameter: {{}}
+- request_restart: call this when Thunder first asks to restart, before any confirmation exists. No parameters. Use parameter: {{}}
+- shutdown_system / restart_system: NEVER call these directly. They are only invoked by the system's code-level confirmation intercept, not by you.
 
 Rules:
 - If the user says "open project X", "open X folder", "open the X folder" → tool_name = "open_folder", parameters = {{"folder_name": "X", "app": "explorer"}}
@@ -122,6 +126,10 @@ Rules:
 - If the user asks to split the screen, snap windows, or put apps side-by-side → tool_name = "split_screen", parameters = {{"left_window": "<left app name>", "right_window": "<right app name>"}}. Omit names if not specified.
 - If the user says "show task view", "show all windows", or asks to see task view → tool_name = "show_task_view", parameters = {{}}
 - If the user says "take a screenshot", "capture the screen", "screenshot this" → tool_name = "take_screenshot", parameters = {{}}
+- If the user says "lock my pc", "lock my laptop", "lock my screen" or similar → tool_name = "lock_screen", parameters = {{}}
+- If the user asks to shut down, turn off, or power off their pc → tool_name = "request_shutdown", parameters = {{}}
+- If the user asks to restart or reboot their pc → tool_name = "request_restart", parameters = {{}}
+- Never call shutdown_system or restart_system yourself under any circumstance — the system handles confirmation automatically once Thunder replies with the code.
 </tools>
 
 <reminders>
