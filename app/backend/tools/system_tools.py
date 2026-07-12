@@ -1,4 +1,5 @@
 from langchain.tools import tool
+import ctypes
 import os
 import datetime
 import subprocess
@@ -335,9 +336,17 @@ def take_screenshot() -> str:
 @tool
 def lock_screen() -> str:
     """Locks the Windows screen.
-    Use this when the user says 'lock my pc', 'lock screen', etc."""
+    Use this when the user says 'lock', 'lock it', 'lock my pc', 'lock screen', etc."""
     try:
-        pyautogui.hotkey('win', 'l')
+        # LockWorkStation() is the official Win32 API for locking the workstation.
+        # pyautogui.hotkey('win', 'l') is blocked by Windows at the secure-input
+        # layer (SendInput cannot synthesise Win+L from an unprivileged process);
+        # calling the API directly bypasses that restriction.
+        result = ctypes.windll.user32.LockWorkStation()
+        if result == 0:
+            # Returns 0 on failure (e.g. no interactive desktop)
+            err = ctypes.get_last_error()
+            return f"Failed to lock screen: LockWorkStation returned 0 (error {err})."
         return "Locked."
     except Exception as e:
         log_error("tool:lock_screen", str(e))

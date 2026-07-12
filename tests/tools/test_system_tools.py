@@ -528,13 +528,33 @@ class TestTakeScreenshot:
 # ---------------------------------------------------------------------------
 # Power Controls
 # ---------------------------------------------------------------------------
-class TestPowerControls:
-    @patch("app.backend.tools.system_tools.pyautogui")
-    def test_lock_screen_calls_pyautogui(self, mock_pyautogui):
+class TestLockScreen:
+    def test_lock_screen_calls_lock_work_station(self):
+        """Happy path: LockWorkStation() returns non-zero (success)."""
         from app.backend.tools.system_tools import lock_screen
-        result = lock_screen()
-        mock_pyautogui.hotkey.assert_called_once_with('win', 'l')
+        with patch("app.backend.tools.system_tools.ctypes") as mock_ctypes:
+            mock_ctypes.windll.user32.LockWorkStation.return_value = 1
+            result = lock_screen()
+        mock_ctypes.windll.user32.LockWorkStation.assert_called_once()
         assert result == "Locked."
+
+    def test_lock_screen_returns_error_when_api_returns_zero(self):
+        """LockWorkStation() returns 0 → graceful failure message (no exception)."""
+        from app.backend.tools.system_tools import lock_screen
+        with patch("app.backend.tools.system_tools.ctypes") as mock_ctypes:
+            mock_ctypes.windll.user32.LockWorkStation.return_value = 0
+            mock_ctypes.get_last_error.return_value = 5  # ERROR_ACCESS_DENIED
+            result = lock_screen()
+        assert "Failed to lock screen" in result
+        assert "LockWorkStation returned 0" in result
+
+    def test_lock_screen_exception_safety(self):
+        """If LockWorkStation raises an unexpected exception, a graceful error is returned."""
+        from app.backend.tools.system_tools import lock_screen
+        with patch("app.backend.tools.system_tools.ctypes") as mock_ctypes:
+            mock_ctypes.windll.user32.LockWorkStation.side_effect = RuntimeError("ctypes broken")
+            result = lock_screen()
+        assert "Failed to lock screen" in result
 
     def test_request_shutdown(self):
         from app.backend.tools.system_tools import request_shutdown

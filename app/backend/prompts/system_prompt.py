@@ -126,7 +126,7 @@ Rules:
 - If the user asks to split the screen, snap windows, or put apps side-by-side → tool_name = "split_screen", parameters = {{"left_window": "<left app name>", "right_window": "<right app name>"}}. Omit names if not specified.
 - If the user says "show task view", "show all windows", or asks to see task view → tool_name = "show_task_view", parameters = {{}}
 - If the user says "take a screenshot", "capture the screen", "screenshot this" → tool_name = "take_screenshot", parameters = {{}}
-- If the user says "lock my pc", "lock my laptop", "lock my screen" or similar → tool_name = "lock_screen", parameters = {{}}
+- If the user says "lock", "lock it", "lock pc", "lock laptop", "lock screen", "lock my pc", "lock my laptop", "lock my screen", or any short phrase whose clear intent is to lock the workstation → you MUST call tool_name = "lock_screen", parameters = {{}}. Do NOT reply conversationally and do NOT claim you locked the screen without populating tool_calls. (Exception: do NOT trigger on unrelated uses such as "lock this file", "is my account locked", "door lock", etc.)
 - If the user asks to shut down, turn off, or power off their pc → tool_name = "request_shutdown", parameters = {{}}
 - If the user asks to restart or reboot their pc → tool_name = "request_restart", parameters = {{}}
 - Never call shutdown_system or restart_system yourself under any circumstance — the system handles confirmation automatically once Thunder replies with the code.
