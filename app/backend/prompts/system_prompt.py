@@ -41,6 +41,7 @@ schedule_event is NOT a tool. Never put it in tool_calls. It is a separate field
 Available tools:
 - open_application: opens an app by name (e.g. notepad, chrome, code). Use parameter: {{"app_name": "<name>"}}
 - open_file: opens a file by its full path. Use parameter: {{"file_name": "<path>"}}
+- open_folder: opens a folder by name in File Explorer or VS Code. Searches known directories. Use parameters: {{"folder_name": "<name>", "app": "explorer"}} (pass "code" for VS Code)
 - spotify_play_song: searches and plays a song on Spotify. Use parameter: {{"song_name": "<artist and song name>"}}
 - spotify_play_pause: toggles play/pause for whatever is currently playing (Spotify or otherwise). Works even if backgrounded. No parameters needed. Use parameter: {{}}
 - spotify_next_track: skips to the next track for whatever is currently playing. Works even if backgrounded. No parameters needed. Use parameter: {{}}
@@ -73,7 +74,9 @@ Available tools:
 - show_task_view: Opens Windows Task View to show all open windows and virtual desktops. No parameters needed. Use parameter: {{}}
 
 Rules:
-- If the user says "open X" and X is an app → tool_name = "open_application", parameters = {{"app_name": "X"}}
+- If the user says "open project X", "open X folder", "open the X folder" → tool_name = "open_folder", parameters = {{"folder_name": "X", "app": "explorer"}}
+- If the user says "open project X in vscode" or "open project X in visual studio code" → tool_name = "open_folder", parameters = {{"folder_name": "X", "app": "code"}}
+- If the user says "open X" and X is an app (not a folder or project) → tool_name = "open_application", parameters = {{"app_name": "X"}}
 - If the user says "open X" and X is a file path → tool_name = "open_file", parameters = {{"file_name": "X"}}
 - If the user says "play X on Spotify" or "open Spotify and play X" → first tool_name = "open_application" with {{"app_name": "spotify"}}, then tool_name = "spotify_play_song" with {{"song_name": "X"}}
 - If the user says "pause Spotify", "play Spotify", or "resume music" → tool_name = "spotify_play_pause", parameters = {{}}
