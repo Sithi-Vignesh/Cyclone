@@ -23,6 +23,7 @@ from app.backend.tools.system_tools import (
     mute_unmute_mic,
     set_brightness,
     adjust_brightness,
+    take_screenshot,
 )
 
 
@@ -496,3 +497,30 @@ class TestAdjustBrightness:
         assert "wmi failure" in result
         sbc.get_brightness.side_effect = None
 
+class TestTakeScreenshot:
+    @patch("app.backend.tools.system_tools.pyautogui")
+    @patch("app.backend.tools.system_tools.os.makedirs")
+    @patch("app.backend.tools.system_tools.datetime")
+    def test_success_case(self, mock_datetime, mock_makedirs, mock_pyautogui):
+        import datetime
+        fake_now = datetime.datetime(2026, 7, 12, 10, 47, 3)
+        mock_datetime.datetime.now.return_value = fake_now
+        
+        result = take_screenshot()
+        
+        expected_path = r"C:\Users\sithi\Pictures\Screenshots\Screenshot 2026-07-12 104703.png"
+        
+        mock_makedirs.assert_called_once_with(r"C:\Users\sithi\Pictures\Screenshots", exist_ok=True)
+        mock_pyautogui.screenshot.assert_called_once_with(expected_path)
+        assert result == f"Screenshot saved to {expected_path}."
+
+    @patch("app.backend.tools.system_tools.pyautogui")
+    @patch("app.backend.tools.system_tools.os.makedirs")
+    def test_exception_safety(self, mock_makedirs, mock_pyautogui):
+        import pyautogui
+        mock_pyautogui.screenshot.side_effect = pyautogui.PyAutoGUIException("test error")
+        
+        result = take_screenshot()
+        
+        assert result.startswith("Failed to take screenshot:")
+        assert "test error" in result

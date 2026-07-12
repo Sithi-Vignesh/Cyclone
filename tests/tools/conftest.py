@@ -65,8 +65,14 @@ if "pywinauto" not in sys.modules:
 # ---------------------------------------------------------------------------
 # Other system / GUI / network packages not installed in the test environment
 # ---------------------------------------------------------------------------
-for _ext_mod in ("psutil", "pyperclip", "pygetwindow", "pyautogui"):
+for _ext_mod in ("psutil", "pyperclip", "pygetwindow"):
     _stub(_ext_mod)
+
+if "pyautogui" not in sys.modules:
+    _pyautogui = _stub("pyautogui")
+    class PyAutoGUIException(Exception):
+        pass
+    _pyautogui.PyAutoGUIException = PyAutoGUIException
 
 # requests and ddgs: stub only if absent; the real `requests` package IS
 # available (used by test_web_tools for requests.exceptions.*), so we only

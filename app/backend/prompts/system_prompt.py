@@ -42,6 +42,7 @@ Available tools:
 - open_application: opens an app by name (e.g. notepad, chrome, code). Use parameter: {{"app_name": "<name>"}}
 - open_file: opens a file by its full path. Use parameter: {{"file_name": "<path>"}}
 - open_folder: opens a folder by name in File Explorer or VS Code. Searches known directories. Use parameters: {{"folder_name": "<name>", "app": "explorer"}} (pass "code" for VS Code)
+- take_screenshot: captures a full-screen screenshot and saves it to the Pictures\\Screenshots folder. No parameters needed. Use parameter: {{}}
 - spotify_play_song: searches and plays a song on Spotify. Use parameter: {{"song_name": "<artist and song name>"}}
 - spotify_play_pause: toggles play/pause for whatever is currently playing (Spotify or otherwise). Works even if backgrounded. No parameters needed. Use parameter: {{}}
 - spotify_next_track: skips to the next track for whatever is currently playing. Works even if backgrounded. No parameters needed. Use parameter: {{}}
@@ -120,6 +121,7 @@ Rules:
 - If the user asks to switch to / focus / bring up a specific app/window → tool_name = "focus_window", parameters = {{"app_name": "<name>"}}
 - If the user asks to split the screen, snap windows, or put apps side-by-side → tool_name = "split_screen", parameters = {{"left_window": "<left app name>", "right_window": "<right app name>"}}. Omit names if not specified.
 - If the user says "show task view", "show all windows", or asks to see task view → tool_name = "show_task_view", parameters = {{}}
+- If the user says "take a screenshot", "capture the screen", "screenshot this" → tool_name = "take_screenshot", parameters = {{}}
 </tools>
 
 <reminders>

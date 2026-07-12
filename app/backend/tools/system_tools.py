@@ -1,5 +1,6 @@
 from langchain.tools import tool
 import os
+import datetime
 import subprocess
 import psutil
 import pyperclip
@@ -306,3 +307,22 @@ def adjust_brightness(direction: str) -> str:
     except Exception as e:
         log_error("tool:adjust_brightness", e)
         return f"Failed to adjust brightness: {e}"
+
+@tool
+def take_screenshot() -> str:
+    """Captures a full-screen screenshot and saves it to the Pictures\\Screenshots folder.
+    Use this when the user says 'take a screenshot', 'capture the screen', etc."""
+    try:
+        screenshots_dir = r"C:\Users\sithi\Pictures\Screenshots"
+        os.makedirs(screenshots_dir, exist_ok=True)
+        
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H%M%S")
+        filename = f"Screenshot {timestamp}.png"
+        full_path = os.path.join(screenshots_dir, filename)
+        
+        pyautogui.screenshot(full_path)
+        
+        return f"Screenshot saved to {full_path}."
+    except Exception as e:
+        log_error("tool:take_screenshot", str(e))
+        return f"Failed to take screenshot: {e}"
