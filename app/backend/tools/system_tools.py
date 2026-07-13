@@ -62,6 +62,17 @@ def read_clipboard() -> str:
     return f"Clipboard contents: {text}"
 
 @tool
+def clipboard_write(value: str) -> str:
+    """Writes a value to the Windows clipboard.
+    Call with only the specific value to copy (e.g. a password, ID, code, or link) — never pass a full sentence or explanation."""
+    try:
+        pyperclip.copy(value)
+        return "Copied to clipboard."
+    except Exception as e:
+        log_error("tool:clipboard_write", str(e))
+        return f"Failed to copy to clipboard: {e}"
+
+@tool
 def get_active_window() -> str:
     """Returns the title of the currently active window."""
     window = gw.getActiveWindow()

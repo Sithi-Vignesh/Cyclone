@@ -16,6 +16,7 @@ from app.backend.tools.system_tools import (
     open_file,
     get_battery_status,
     read_clipboard,
+    clipboard_write,
     get_active_window,
     get_all_windows,
     set_volume,
@@ -185,6 +186,48 @@ class TestReadClipboard:
         with patch("app.backend.tools.system_tools.pyperclip.paste", return_value=None):
             result = read_clipboard()
         assert "empty" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# clipboard_write
+# ---------------------------------------------------------------------------
+class TestClipboardWrite:
+    def test_calls_pyperclip_copy_with_given_value(self):
+        """pyperclip.copy must be called exactly once with the value passed in."""
+        with patch("app.backend.tools.system_tools.pyperclip.copy") as mock_copy:
+            clipboard_write("mypassword")
+        mock_copy.assert_called_once_with("mypassword")
+
+    def test_returns_success_string_on_success(self):
+        """On a successful copy, the function must return a confirmation string."""
+        with patch("app.backend.tools.system_tools.pyperclip.copy"):
+            result = clipboard_write("abc123")
+        assert result == "Copied to clipboard."
+
+    def test_handles_pyperclip_exception_gracefully(self):
+        """If pyperclip.copy raises, the exception must NOT propagate;
+        a failure string must be returned and log_error must be called."""
+        with (
+            patch(
+                "app.backend.tools.system_tools.pyperclip.copy",
+                side_effect=RuntimeError("no clipboard"),
+            ),
+            patch("app.backend.tools.system_tools.log_error") as mock_log,
+        ):
+            result = clipboard_write("somevalue")
+        assert "Failed to copy to clipboard" in result
+        assert "no clipboard" in result
+        mock_log.assert_called()
+
+    def test_does_not_call_pyperclip_paste_or_read(self):
+        """clipboard_write is a write-only tool — it must never call pyperclip.paste()
+        as a side effect (scope discipline)."""
+        with (
+            patch("app.backend.tools.system_tools.pyperclip.copy"),
+            patch("app.backend.tools.system_tools.pyperclip.paste") as mock_paste,
+        ):
+            clipboard_write("onlywrite")
+        mock_paste.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

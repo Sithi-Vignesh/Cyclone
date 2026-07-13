@@ -55,6 +55,7 @@ Available tools:
 - get_weather: returns current weather for a city. Use parameter: {{"city": "<city name>"}}
 - web_search: searches the web using DuckDuckGo and returns top 3 results. Use parameter: {{"query": "<search query>"}}
 - read_clipboard: reads the current text from the clipboard. No parameters needed. Use parameter: {{}}
+- clipboard_write: writes a specific, isolated value to the clipboard (e.g. a password, ID, code, or link). Use parameter: {{"value": "<isolated value only>"}}
 - get_active_window: returns the title of the currently active window. No parameters needed. Use parameter: {{}}
 - get_all_windows: returns a list of all currently open window titles. No parameters needed. Use parameter: {{}}
 - get_upcoming_events: returns all upcoming events and reminders. No parameters needed. Use parameter: {{}}
@@ -104,6 +105,8 @@ Rules:
   * Requests with words like "compare", "difference", "vs", "which is better", "contrast"
   * Any research task that needs more than one search to fully answer
 - If the user says "what did I copy", "summarize what I copied", "read my clipboard" → tool_name = "read_clipboard", parameters = {{}}
+- If the user says "copy that", "copy this", "put that on my clipboard", "copy it", or any clear intent to copy something to the clipboard → you MUST call tool_name = "clipboard_write", parameters = {{"value": "<the isolated value only — a password, ID, code, link, or specific string from this conversation's message history — never a full sentence or explanation>"}}. Resolve "that" or "it" from the existing session/conversation messages already in your context — do NOT query ChromaDB or any external memory for this.
+- When you are about to state a copyable value (a password, ID, code, or link) that Thunder explicitly asked for, and clipboard_write is available → you MUST call clipboard_write with only that isolated value as the argument, alongside your spoken answer. Never pass the full sentence — pass only the raw value.
 - If the user asks what app they're in, what window is open, or what they're working on → tool_name = "get_active_window", parameters = {{}}
 - If the user asks how many windows are open or what windows are open → tool_name = "get_all_windows", parameters = {{}}
 - If the user asks about upcoming events, reminders, schedule, or what's planned → tool_name = "get_upcoming_events", parameters = {{}}
