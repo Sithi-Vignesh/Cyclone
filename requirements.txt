@@ -1,19 +1,20 @@
+langchain-core==1.4.8
 langchain-groq
 python-dotenv
 langchain
 langchain-community
-chromadb
+chromadb==1.5.9
 sentence-transformers
-apscheduler
+apscheduler==3.11.2
 langchainhub
-pywinauto
+pywinauto==0.6.9
 psutil
-ddgs
-pyperclip
-pygetwindow
-pyautogui
+ddgs==9.14.4
+pyperclip==1.11.0
+pygetwindow==0.0.9
+pyautogui==0.9.54
 vaderSentiment
-faster-whisper
+faster-whisper==1.2.1
 sounddevice
 numpy
 # torch/torchaudio: install with --index-url https://download.pytorch.org/whl/cpu to avoid pulling CUDA build
@@ -21,7 +22,7 @@ torch==2.12.1
 torchaudio==2.11.0
 
 piper-tts
-openwakeword
+openwakeword==0.6.0
 num2words
 pycaw
 screen-brightness-control

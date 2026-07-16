@@ -1,5 +1,4 @@
 import time
-from datetime import datetime
 from pywinauto import Application, findwindows
 from langchain.tools import tool
 from app.backend.core.error_logger import log_error
@@ -52,8 +51,8 @@ def _find_real_element(window, title=None, control_type=None, timeout=10.0):
     Args:
         window:        The pywinauto top_window() wrapper for the WhatsApp window.
         title:         UIA name / accessibility title of the element, or None to
-                       match any title (useful for DataItem rows which have no name).
-        control_type:  UIA control type string (e.g. "Button", "Edit", "DataItem"),
+                       match any title.
+        control_type:  UIA control type string (e.g. "Button", "Edit"),
                        or None to skip that filter.
         timeout:       Maximum seconds to poll before giving up.
 
@@ -77,13 +76,10 @@ def _find_real_element(window, title=None, control_type=None, timeout=10.0):
             elem = window.child_window(**spec_kwargs)
             if elem.exists(timeout=0.3):
                 return elem
-            else:
-                print(f"[{datetime.now().isoformat()}] DIAGNOSTIC - exists(0.3) returned False for {spec_kwargs}")  # DIAGNOSTIC - remove after root cause found
-        except Exception as e:
-            print(f"[{datetime.now().isoformat()}] DIAGNOSTIC - exception for {spec_kwargs}: {type(e).__name__}: {e}")  # DIAGNOSTIC - remove after root cause found
+        except Exception:
+            pass
 
         if time.time() >= deadline:
-            print(f"[{datetime.now().isoformat()}] DIAGNOSTIC - TIMEOUT after {timeout}s waiting for title={title}, control_type={control_type}")  # DIAGNOSTIC - remove after root cause found
             return None
         time.sleep(0.25)
 
@@ -112,85 +108,27 @@ def call_contact(name: str, video: bool = False) -> str:
         window.set_focus()
         time.sleep(2.5 if already_open else 1)  # already-open needs a beat to raise/focus
 
-        # --- Step 1: locate and click the search box ---
-        # _find_real_element transparently handles the WebView2 duplication bug
-        # (Chromium replicates every named UIA node ~79x; found_index=0 avoids
-        # the ElementAmbiguousError that child_window() would otherwise raise).
-        search_box = _find_real_element(
-            window,
-            title="Search or start a new chat",
-            control_type="Edit",
-            timeout=2,
-        )
-        if search_box is None:
-            return "Could not find the WhatsApp search box."
+        # --- Step 1: focus the search bar via WhatsApp's native shortcut ---
+        # Ctrl+F is WhatsApp Desktop's keyboard shortcut for "focus search".
+        # It works reliably from any UI state (home, chat open, search already
+        # active) without needing a UIA element lookup, so it sidesteps all
+        # leftover-state and WebView2-duplication issues from previous calls.
+        window.type_keys("^f")
+        time.sleep(0.4)  # let the focus animation settle
 
-        search_box.click_input()
-        time.sleep(0.5)
-
-        # Clear any existing text, then type the contact name
+        # Clear any text left over from a previous call, then type the new name.
         window.type_keys("^a{BACKSPACE}", pause=0.1)
-        time.sleep(1.0)
+        time.sleep(0.3)
 
         # --- Step 2: type the contact name ---
         window.type_keys(name, with_spaces=True, pause=0.05)
-        time.sleep(1.0)
+        time.sleep(1.2)  # give search results time to populate
 
-        # --- Step 3: wait for a DataItem result and click the first one ---
-        # DataItem = the contact rows in the search results dropdown.
-        contact_found = False
-        deadline = time.time() + 10.0
-        
-        while time.time() < deadline:
-            time.sleep(0.5)
-            
-            # DIAGNOSTIC - remove after root cause found
-            print(f"[{datetime.now().isoformat()}] DIAGNOSTIC - Listing all DataItem matches:")
-            all_items = []
-            try:
-                from pywinauto import findwindows
-                all_items = findwindows.find_elements(
-                    title=None, 
-                    control_type="DataItem", 
-                    backend="uia", 
-                    visible_only=True, 
-                    top_level_only=False, 
-                    parent=window.element_info
-                )
-                for i, item in enumerate(all_items):
-                    if i >= 20:
-                        print(f"  ... ({len(all_items) - 20} more elements not shown)")
-                        break
-                    print(f"  [{i}] name: {item.name!r} | class: {item.class_name!r}")
-            except Exception as e:
-                print(f"[{datetime.now().isoformat()}] DIAGNOSTIC - Error enumerating DataItems: {e}")
-                
-            headers = {"Chats", "Groups in common", "Messages", ""}
-            matched_name = None
-            for item in all_items:
-                item_name = item.name or ""
-                if item_name in headers:
-                    continue
-                if name.lower() in item_name.lower():
-                    matched_name = item_name
-                    break
-                    
-            if matched_name is not None:
-                first_item = _find_real_element(
-                    window,
-                    title=matched_name,
-                    control_type="DataItem",
-                    timeout=0,  # Outer loop already provides retry
-                )
-                if first_item is not None:
-                    first_item.click_input()
-                    time.sleep(2.0)
-                    time.sleep(1.0)  # give the chat UI a moment to fully load
-                    contact_found = True
-                    break
-
-        if not contact_found:
-            return f"Couldn't find that contact: '{name}'"
+        # --- Step 3: open the top result with Enter ---
+        # Enter navigates directly into the first search result's chat, removing
+        # the need for DataItem UIA enumeration entirely.
+        window.type_keys("{ENTER}")
+        time.sleep(1.2)  # let the chat view fully load before looking for the call button
 
         # --- Step 4: locate and click the call button ---
         button_name = "Video call" if video else "Voice call"
