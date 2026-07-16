@@ -152,3 +152,61 @@ def call_contact(name: str, video: bool = False) -> str:
     except Exception as e:
         log_error("tool:call_contact", e)
         return f"Failed to call {name} on WhatsApp: {e}"
+
+
+@tool
+def text_contact(name: str, message: str) -> str:
+    """Types a WhatsApp message to a contact or group by name and leaves it
+    ready to send. The message is NOT sent automatically — the user sends it
+    manually by pressing Enter.
+    Use this when the user asks to text, message, or write to someone on WhatsApp."""
+    try:
+        already_open = False
+        app = _connect_whatsapp_window(max_wait_ticks=1, tick_interval=0)
+        if app is not None:
+            already_open = True
+        else:
+            if hasattr(open_application, "invoke"):
+                open_application.invoke({"app_name": "whatsapp"})
+            else:
+                open_application("whatsapp")
+            time.sleep(7)  # cold start: give WhatsApp's Electron UI time to fully render
+            app = _connect_whatsapp_window(max_wait_ticks=10, tick_interval=0.5)
+
+        if app is None:
+            return "WhatsApp didn't open in time. Try again."
+
+        window = app.top_window()
+        window.set_focus()
+        time.sleep(2.5 if already_open else 1)  # already-open needs a beat to raise/focus
+
+        # --- Step 1: focus the search bar via WhatsApp's native shortcut ---
+        window.type_keys("^f")
+        time.sleep(0.4)  # let the focus animation settle
+
+        # --- Step 2: clear any leftover text from a previous search ---
+        window.type_keys("^a{BACKSPACE}", pause=0.1)
+        time.sleep(0.3)
+
+        # --- Step 3: type the contact name ---
+        window.type_keys(name, with_spaces=True, pause=0.05)
+        time.sleep(1.2)  # give search results time to populate
+
+        # --- Step 4: open the top result — cursor auto-lands on the message bar ---
+        # Enter navigates into the first search result's chat.  WhatsApp Desktop
+        # automatically focuses the message input box after navigation, so no
+        # additional click or UIA element lookup is required.
+        window.type_keys("{ENTER}")
+        time.sleep(1.0)  # let the chat view load and the input box gain focus
+
+        # --- Step 5: type the message (do NOT send — user sends manually) ---
+        window.type_keys(message, with_spaces=True, pause=0.05)
+
+        return (
+            f"Typed your message to {name} on WhatsApp. "
+            "Press Enter (or click Send) whenever you're ready."
+        )
+
+    except Exception as e:
+        log_error("tool:text_contact", e)
+        return f"Failed to text {name} on WhatsApp: {e}"

@@ -52,6 +52,7 @@ Available tools:
 - spotify_like_current_song: likes the current song on Spotify. No parameters needed. Use parameter: {{}}
 - spotify_play_liked_songs: plays the Liked Songs playlist on Spotify. No parameters needed. Use parameter: {{}}
 - call_contact: places a WhatsApp voice or video call to a contact. Use parameter: {{"name": "<contact name>", "video": <true/false>}}
+- text_contact: types a WhatsApp message to a contact and leaves it ready to send (user sends manually). Use parameter: {{"name": "<contact name>", "message": "<message text>"}}
 - get_battery_status: returns current battery percentage and charging status. No parameters needed. Use parameter: {{}}
 - get_weather: returns current weather for a city. Use parameter: {{"city": "<city name>"}}
 - web_search: searches the web using DuckDuckGo and returns top 3 results. Use parameter: {{"query": "<search query>"}}
@@ -95,6 +96,7 @@ Rules:
 - If the user says "play my liked songs" → tool_name = "spotify_play_liked_songs", parameters = {{}}
 - If the user says "call X" or "call X on WhatsApp" → tool_name = "call_contact", parameters = {{"name": "X", "video": false}}
 - If the user says "video call X" or "video call X on WhatsApp" → tool_name = "call_contact", parameters = {{"name": "X", "video": true}}
+- If the user says "text X that Y", "message X saying Y", "send X a message saying Y", "WhatsApp X saying Y", "send a WhatsApp to X saying Y", or any phrasing whose clear intent is to type a message to a contact on WhatsApp → tool_name = "text_contact", parameters = {{"name": "X", "message": "Y"}}
 - If the user asks about battery → tool_name = "get_battery_status", parameters = {{}}
 - If the user asks about weather in a city → tool_name = "get_weather", parameters = {{"city": "<city>"}}
 - If the user asks about weather without specifying a city → assume Vellore.

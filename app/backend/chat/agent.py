@@ -15,7 +15,7 @@ from app.backend.tools.spotify_tools import (
     spotify_like_current_song,
     spotify_play_liked_songs
 )
-from app.backend.tools.whatsapp_tools import call_contact
+from app.backend.tools.whatsapp_tools import call_contact, text_contact
 from app.backend.tools.web_tools import get_weather, web_search
 
 tools = [
@@ -32,6 +32,7 @@ tools = [
     spotify_like_current_song,
     spotify_play_liked_songs,
     call_contact,
+    text_contact,
     get_weather,
     get_battery_status,
     web_search,

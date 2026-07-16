@@ -27,7 +27,7 @@ from app.backend.tools.spotify_tools import (
     spotify_like_current_song,
     spotify_play_liked_songs
 )
-from app.backend.tools.whatsapp_tools import call_contact
+from app.backend.tools.whatsapp_tools import call_contact, text_contact
 from app.backend.tools.web_tools import get_weather, web_search
 from app.backend.chat.agent import agent_executor
 from openai import RateLimitError
@@ -51,6 +51,7 @@ tool_registry = {
     "spotify_like_current_song": spotify_like_current_song,
     "spotify_play_liked_songs": spotify_play_liked_songs,
     "call_contact": call_contact,
+    "text_contact": text_contact,
     "get_battery_status": get_battery_status,
     "get_weather": get_weather,
     "web_search": web_search,
